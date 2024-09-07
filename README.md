@@ -10,7 +10,7 @@ Right now, I think this only works on a mac. To install all the dependencies, ru
 
 `brew install ffmpeg jq python yt-dlp && pip install mlx_whisper`
 
-Once you have the dependencies installed, put this script anywhere on your path. I recommend `/usr/local/bin`. Then make sure it's executable with something like `chmod a+x /usr/local/bin/yt-transcribe`.
+Once you have the dependencies installed, copy `yt-transcribe` anywhere on your path. I recommend `/usr/local/bin`. Then make sure it's executable with something like `chmod a+x /usr/local/bin/yt-transcribe`.
 
 If you would like to use this on a non-mac computer, [let me know](https://hachyderm.io/@llimllib/); it could be made to work with [whisper.cpp](https://github.com/ggerganov/whisper.cpp) fairly easily.
 
