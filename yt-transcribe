@@ -261,8 +261,9 @@ else
             -vf "select='eq(n,0)+eq(pict_type,PICT_TYPE_I)+gt(scene,0.3)',scale=320:240,unsharp" \
             -vframes 1 -q:v 2 "$img" -y &> /dev/null
         printf '<img src="./%s"><p>' "$imgName" >> "$transcript_html"
-        segment=$(cat "$transcript" |
-            jq -r $"[.segments[] | select(.start >= $i and .start < $((i+thumbinterval))).text] | join(\"<p>\n\")")
+        segment=$(jq -r $"[.segments[] |
+                           select(.start >= $i and .start < $((i+thumbinterval))).text] |
+                          join(\"<p>\n\")" "$transcript")
         printf "%s<p>\n" "$segment" >> "$transcript_html"
     done
 fi
