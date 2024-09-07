@@ -179,7 +179,7 @@ p {
   hyphens: auto;
 }
 </style>
-<title>transcribe of $title</title>
+<title>$title - transcription by yt-transcribe</title>
 </head><body><p><em>transcribe of <a href="$1">$title</a></em><p>
 EOF
 
