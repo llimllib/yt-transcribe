@@ -5,7 +5,7 @@ function usage() {
         cat <<"EOF"
 Usage: yt-transcribe [options] <youtube-url>
 
-Output a transcribe of the given youtube video.
+Transcribe a yotube video into an easily readable HTML file
 
 OPTIONS
 
@@ -29,15 +29,15 @@ To install all on a mac:
 
 EXAMPLES
 
-Create a transcribe of a youtube video:
+Transcribe a youtube video:
 
     yt-transcribe 'https://www.youtube.com/watch?v=vP4iY1TtS3s'
 
-Create a transcribe with thumbnails every 30 seconds (the default):
+Transcribe a video and insert thumbnails every 30 seconds (the default):
 
     yt-transcribe -thumbs 'https://www.youtube.com/watch?v=Ac7G7xOG2Ag'
 
-Create a transcribe with thumbnails every 10 seconds (the default):
+Transcribe a video and insert thumbnails every 10 seconds:
 
     yt-transcribe -thumbs -thumbinterval 10 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
 
@@ -180,7 +180,7 @@ p {
 }
 </style>
 <title>$title - transcription by yt-transcribe</title>
-</head><body><p><em>transcribe of <a href="$1">$title</a></em><p>
+</head><body><p><em>transcription of <a href="$1">$title</a></em><p>
 EOF
 
 # if no thumbs are requested, convert it into a text file and make an HTML page
