@@ -1,9 +1,9 @@
 # yt-transcribe
 
 ```
-Usage: yt-transcript [options] <youtube-url>
+Usage: yt-transcribe [options] <youtube-url>
 
-Output a transcript of the given youtube video.
+Output a transcribe of the given youtube video.
 
 OPTIONS
 
@@ -27,17 +27,17 @@ To install all on a mac:
 
 EXAMPLES
 
-Create a transcript of a youtube video:
+Create a transcribe of a youtube video:
 
-    yt-transcript 'https://www.youtube.com/watch?v=vP4iY1TtS3s'
+    yt-transcribe 'https://www.youtube.com/watch?v=vP4iY1TtS3s'
 
-Create a transcript with thumbnails every 30 seconds (the default):
+Create a transcribe with thumbnails every 30 seconds (the default):
 
-    yt-transcript -thumbs 'https://www.youtube.com/watch?v=Ac7G7xOG2Ag'
+    yt-transcribe -thumbs 'https://www.youtube.com/watch?v=Ac7G7xOG2Ag'
 
-Create a transcript with thumbnails every 10 seconds (the default):
+Create a transcribe with thumbnails every 10 seconds (the default):
 
-    yt-transcript -thumbs -thumbinterval 10 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
+    yt-transcribe -thumbs -thumbinterval 10 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
 
 source: https://github.com/llimllib/yt-transcribe
 ```
