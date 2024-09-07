@@ -3,9 +3,9 @@ set -euo pipefail
 
 function usage() {
         cat <<"EOF"
-Usage: yt-transcript [options] <youtube-url>
+Usage: yt-transcribe [options] <youtube-url>
 
-Output a transcript of the given youtube video.
+Output a transcribe of the given youtube video.
 
 OPTIONS
 
@@ -29,17 +29,17 @@ To install all on a mac:
 
 EXAMPLES
 
-Create a transcript of a youtube video:
+Create a transcribe of a youtube video:
 
-    yt-transcript 'https://www.youtube.com/watch?v=vP4iY1TtS3s'
+    yt-transcribe 'https://www.youtube.com/watch?v=vP4iY1TtS3s'
 
-Create a transcript with thumbnails every 30 seconds (the default):
+Create a transcribe with thumbnails every 30 seconds (the default):
 
-    yt-transcript -thumbs 'https://www.youtube.com/watch?v=Ac7G7xOG2Ag'
+    yt-transcribe -thumbs 'https://www.youtube.com/watch?v=Ac7G7xOG2Ag'
 
-Create a transcript with thumbnails every 10 seconds (the default):
+Create a transcribe with thumbnails every 10 seconds (the default):
 
-    yt-transcript -thumbs -thumbinterval 10 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
+    yt-transcribe -thumbs -thumbinterval 10 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
 
 source: https://github.com/llimllib/yt-transcribe
 EOF
@@ -104,17 +104,17 @@ fi
 yturl_clean=${1//[^a-zA-Z0-9]/}
 
 # create the cache folder if it doesn't exist
-yttranscript_cache_folder="/tmp/yttranscript_cache"
-if [ ! -d $yttranscript_cache_folder ]; then
-    mkdir $yttranscript_cache_folder
+yttranscribe_cache_folder="/tmp/yttranscribe_cache"
+if [ ! -d $yttranscribe_cache_folder ]; then
+    mkdir $yttranscribe_cache_folder
 fi
 
 # get the video title
 title=$(yt-dlp --skip-download --print title "$1")
 
 # download audio of talk if we haven't yet
-ytdl_audio_outfile="$yttranscript_cache_folder/rawaudio_$yturl_clean.%(ext)s"
-rawaudio=$(find "$yttranscript_cache_folder" -name "rawaudio_$yturl_clean*")
+ytdl_audio_outfile="$yttranscribe_cache_folder/rawaudio_$yturl_clean.%(ext)s"
+rawaudio=$(find "$yttranscribe_cache_folder" -name "rawaudio_$yturl_clean*")
 if [ -z "$rawaudio" ]; then
     printf "\033[32mdownloading talk audio\033[0m\n"
     if ! yt-dlp -f ba "$1" \
@@ -125,12 +125,12 @@ if [ -z "$rawaudio" ]; then
     fi
 fi
 # re-run the `find` bc the file should exist now if it didn't before
-rawaudio=$(find "$yttranscript_cache_folder" -name "rawaudio_$yturl_clean*")
+rawaudio=$(find "$yttranscribe_cache_folder" -name "rawaudio_$yturl_clean*")
 
 
 # download video talk if we need it (thumbnails are requested) and haven't yet
-ytdl_video_outfile="$yttranscript_cache_folder/rawvideo_$yturl_clean.%(ext)s"
-rawvideo=$(find "$yttranscript_cache_folder" -name "rawvideo_$yturl_clean*")
+ytdl_video_outfile="$yttranscribe_cache_folder/rawvideo_$yturl_clean.%(ext)s"
+rawvideo=$(find "$yttranscribe_cache_folder" -name "rawvideo_$yturl_clean*")
 if [ -n "$thumbs" ] && [ -z "$rawvideo" ]; then
     printf "\033[32mdownloading talk video\033[0m\n"
     if ! yt-dlp -f bv "$1" \
@@ -140,11 +140,11 @@ if [ -n "$thumbs" ] && [ -z "$rawvideo" ]; then
         exit 1
     fi
 fi
-rawvideo=$(find "$yttranscript_cache_folder" -name "rawvideo_$yturl_clean*")
+rawvideo=$(find "$yttranscribe_cache_folder" -name "rawvideo_$yturl_clean*")
 
 
 # convert into 16-bit wav file if we haven't yet
-wavfile="$yttranscript_cache_folder/audio_$yturl_clean.wav"
+wavfile="$yttranscribe_cache_folder/audio_$yturl_clean.wav"
 if [ ! -f "$wavfile" ]; then
     printf "\033[32mconverting to wav\033[0m\n"
     if ! ffmpeg -y "${ffmpegquiet[@]}" \
@@ -158,7 +158,7 @@ fi
 
 # Create an HTML file to display. We'll add the text of the talk in the next
 # branch
-transcript_html="$yttranscript_cache_folder/$yturl_clean.html"
+transcript_html="$yttranscribe_cache_folder/$yturl_clean.html"
 cat <<EOF >"$transcript_html"
 <html><head>
 <meta charset="utf-8">
@@ -179,8 +179,8 @@ p {
   hyphens: auto;
 }
 </style>
-<title>transcript of $title</title>
-</head><body><p><em>transcript of <a href="$1">$title</a></em><p>
+<title>transcribe of $title</title>
+</head><body><p><em>transcribe of <a href="$1">$title</a></em><p>
 EOF
 
 # if no thumbs are requested, convert it into a text file and make an HTML page
@@ -189,23 +189,17 @@ if [ -z "$thumbs" ]; then
     # mlx_whisper saves the input file into an output dir with the same filename
     # but with .txt instead of .wav. I wish it had an option to specify file output
     # name but it does not
-    transcript="$yttranscript_cache_folder/audio_$yturl_clean.txt"
+    transcript="$yttranscribe_cache_folder/audio_$yturl_clean.txt"
     if [ ! -f "$transcript" ]; then
         printf "\033[32mtranscribing\033[0m\n"
         if ! mlx_whisper --model 'mlx-community/distil-whisper-large-v3' \
                  -f txt \
-                 -o "$yttranscript_cache_folder" \
+                 -o "$yttranscribe_cache_folder" \
                  --verbose False \
                  "$wavfile"; then
             printf "\033[31mfailed running whisper.cpp\033[0m\n"
             exit 1
         fi
-        # if ! whisper-cpp -np -otxt \
-        #     -m ~/.local/share/blisper/ggml-distil-large-v3.bin ./input.wav \
-        #     -of "$transcriptArg"; then
-        #     printf "\033[31mfailed running whisper.cpp\033[0m\n"
-        #     exit 1
-        # fi
     fi
     sed -E 's/([.?])$/\1<p>/' "$transcript" >> "$transcript_html"
 else
@@ -229,12 +223,12 @@ else
     fi
 
     # transcribe the video into json format, clipping at 30-second intervals
-    transcript="$yttranscript_cache_folder/audio_$yturl_clean.json"
+    transcript="$yttranscribe_cache_folder/audio_$yturl_clean.json"
     if [ ! -f "$transcript" ]; then
         printf "\033[32mtranscribing\033[0m\n"
         if ! mlx_whisper --model 'mlx-community/distil-whisper-large-v3' \
                  -f json \
-                 -o "$yttranscript_cache_folder" \
+                 -o "$yttranscribe_cache_folder" \
                  --verbose False \
                  --clip-timestamps "${intervals[@]}" \
                  "$wavfile"; then
@@ -246,7 +240,7 @@ else
     # Now loop through the intervals and output the HTML accordingly
     for ((i=0; i<="$duration_sec"; i+=thumbinterval)); do
         imgName="${yturl_clean}_thumb_$i.jpg"
-        img="$yttranscript_cache_folder/$imgName"
+        img="$yttranscribe_cache_folder/$imgName"
         # I tried to find a video filter here that would avoid the initial
         # black frame I'm seeing, but was unsuccessful. Some attempts:
         #
