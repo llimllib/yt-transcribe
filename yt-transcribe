@@ -19,13 +19,14 @@ DEPENDENCIES
 Assumes you have installed:
 
 - ffmpeg
+- jq
 - mlx_whisper
 - yt-dlp
 - python
 
 To install all on a mac:
 
-`brew install ffmpeg python yt-dlp && pip install mlx_whisper`
+`brew install ffmpeg jq python yt-dlp && pip install mlx_whisper`
 
 EXAMPLES
 
@@ -97,6 +98,12 @@ fi
 if ! command -v mlx_whisper &> /dev/null
 then
     printf "\033[31mYou must install mlx_whisper\033[0m: https://pypi.org/project/mlx-whisper/\n\n"
+    exit 1
+fi
+
+if ! command -v jq &> /dev/null
+then
+    printf "\033[31mYou must install jq\033[0m: https://jqlang.github.io/jq/download/\n\n"
     exit 1
 fi
 

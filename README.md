@@ -8,7 +8,7 @@ I've put up a [sample transcription here](https://cdn.billmill.org/static/yt-tra
 
 Right now, I think this only works on a mac. To install all the dependencies, run:
 
-`brew install ffmpeg python yt-dlp && pip install mlx_whisper`
+`brew install ffmpeg jq python yt-dlp && pip install mlx_whisper`
 
 Once you have the dependencies installed, put this script anywhere on your path. I recommend `/usr/local/bin`. Then make sure it's executable with something like `chmod a+x /usr/local/bin/yt-transcribe`.
 
@@ -35,13 +35,14 @@ DEPENDENCIES
 Assumes you have installed:
 
 - ffmpeg
+- jq
 - mlx_whisper
 - yt-dlp
 - python
 
 To install all on a mac:
 
-`brew install ffmpeg python yt-dlp && pip install mlx_whisper`
+`brew install ffmpeg jq python yt-dlp && pip install mlx_whisper`
 
 EXAMPLES
 
