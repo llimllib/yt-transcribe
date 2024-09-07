@@ -60,3 +60,7 @@ Transcribe a video and insert thumbnails every 10 seconds:
 
 source: https://github.com/llimllib/yt-transcribe
 ```
+
+# why mlx_whisper instead of whisper.cpp?
+
+Because it's [a lot faster on my machine](https://notes.billmill.org/link_blog/2024/08/mlx-whisper.html)
