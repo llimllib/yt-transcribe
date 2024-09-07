@@ -239,7 +239,7 @@ else
                  --verbose False \
                  --clip-timestamps "${intervals[@]}" \
                  "$wavfile"; then
-            printf "\033[31mfailed running whisper.cpp\032[0m\n"
+            printf "\033[31mfailed running whisper.cpp\033[0m\n"
             exit 1
         fi
     fi
