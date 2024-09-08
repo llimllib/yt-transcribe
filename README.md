@@ -2,7 +2,7 @@
 
 **Transcribe a youtube video into an easily readable HTML file**
 
-I've put up a [sample transcription here](https://cdn.billmill.org/static/yt-transcribe/definedefine/definedefine.html) if you want to see what the output looks like with thumbnails, and a [sample without thumbnails here](http://cdn.billmill.org/static/yt-transcribe/cumberbatch/index.html) if you want to see what that looks like.
+I've put up a [sample transcription here](https://llimllib.github.io/yt-transcribe/definedefine/definedefine.html) if you want to see what the output looks like with thumbnails, and a [sample without thumbnails here](https://llimllib.github.io/yt-transcribe/cumberbatch/) if you want to see what that looks like.
 
 ## installation
 
