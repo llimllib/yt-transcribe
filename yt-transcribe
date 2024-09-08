@@ -71,7 +71,6 @@ outfile=
 
 # parse command line arguments
 while true; do
-        printf -- "----- %s" "$1"
     case $1 in
         -v)
             set -x
