@@ -190,8 +190,8 @@ fi
 
 # Create an HTML file to display. We'll add the text of the talk in the
 # next branch
-htmldir="${outdir:-yttranscribe_cache_folder}"
-transcript_html="${htmldir}/${outfile:-yturl_clean.html}"
+htmldir="${outdir:-$yttranscribe_cache_folder}"
+transcript_html="${htmldir}/${outfile:-$yturl_clean.html}"
 cat <<EOF >"$transcript_html"
 <html><head>
 <meta charset="utf-8">
