@@ -10,6 +10,8 @@ Transcribe a youtube video into an easily readable HTML file
 OPTIONS
 
   -help:          print this message
+  -outdir:        the directory to put the output files in. [default /tmp/yttranscribe_cache]
+  -outfile:       the name of the output HTML file
   -thumbs:        enable thumbnail generation
   -thumbinterval: the interval between thumbnails, in seconds [default 30]
   -v:             print more verbose output
@@ -21,8 +23,8 @@ Assumes you have installed:
 - ffmpeg
 - jq
 - mlx_whisper
-- yt-dlp
 - python
+- yt-dlp
 
 To install all on a mac:
 
@@ -42,10 +44,19 @@ Transcribe a video and insert thumbnails every 10 seconds:
 
     yt-transcribe -thumbs -thumbinterval 10 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
 
+Transcribe a video to the 'look-around-you' directory, with a filename 'water.html':
+
+    yt-transcribe -thumbs -outdir ./look-around-you -outfile water.html 'https://www.youtube.com/watch?v=gaI6kBVyu00'
+
 source: https://github.com/llimllib/yt-transcribe
 EOF
         exit 1
 }
+
+CLR='\033[0m'
+RED='\033[31m'
+GREEN='\033[32m'
+
 if [ -z "${1:-}" ]; then
     usage
 fi
@@ -55,9 +66,12 @@ ffmpegquiet=(-hide_banner -loglevel error)
 ytdlpquiet=(--quiet)
 thumbs=
 thumbinterval=30 # default 30s between thumbs
+outdir=
+outfile=
 
 # parse command line arguments
 while true; do
+        printf -- "----- %s" "$1"
     case $1 in
         -v)
             set -x
@@ -72,7 +86,14 @@ while true; do
         -thumbinterval)
             thumbinterval=$2
             shift 2
-            break
+        ;;
+        -outdir)
+            outdir=$2
+            shift 2
+        ;;
+        -outfile)
+            outfile=$2
+            shift 2
         ;;
         -help)
             usage
@@ -83,27 +104,32 @@ while true; do
     esac
 done
 
+if [ ! -d "${outdir:-.}" ]; then
+    printf "%boutdir %s does not exist%b" "$RED" "$outdir" "$CLR"
+    exit 1
+fi
+
 # verify requirements are installed
 if ! command -v ffmpeg &> /dev/null
 then
-    printf "\033[31mYou must install ffmpeg\033[0m: https://ffmpeg.org/download.html\n\n"
+    printf "%bYou must install ffmpeg%b: https://ffmpeg.org/download.html\n\n" "$RED" "$CLR"
 fi
 
 if ! command -v yt-dlp &> /dev/null
 then
-    printf "\033[31mYou must install yt-dlp\033[0m: https://github.com/yt-dlp/yt-dlp#installation\n\n"
+    printf "%bYou must install yt-dlp%b: https://github.com/yt-dlp/yt-dlp#installation\n\n" "$RED" "$CLR"
     exit 1
 fi
 
 if ! command -v mlx_whisper &> /dev/null
 then
-    printf "\033[31mYou must install mlx_whisper\033[0m: https://pypi.org/project/mlx-whisper/\n\n"
+    printf "%bYou must install mlx_whisper%b: https://pypi.org/project/mlx-whisper/\n\n" "$RED" "$CLR"
     exit 1
 fi
 
 if ! command -v jq &> /dev/null
 then
-    printf "\033[31mYou must install jq\033[0m: https://jqlang.github.io/jq/download/\n\n"
+    printf "%bYou must install jq%b: https://jqlang.github.io/jq/download/\n\n" "$RED" "$CLR"
     exit 1
 fi
 
@@ -123,11 +149,11 @@ title=$(yt-dlp --skip-download --print title "$1")
 ytdl_audio_outfile="$yttranscribe_cache_folder/rawaudio_$yturl_clean.%(ext)s"
 rawaudio=$(find "$yttranscribe_cache_folder" -name "rawaudio_$yturl_clean*")
 if [ -z "$rawaudio" ]; then
-    printf "\033[32mdownloading talk audio\033[0m\n"
+    printf "%bdownloading talk audio%b\n" "$GREEN" "$CLR"
     if ! yt-dlp -f ba "$1" \
         "${ytdlpquiet[@]}" \
         -o "$ytdl_audio_outfile"; then
-        printf "\033[31mfailed running yt-dlp\033[0m\n"
+        printf "%bfailed running yt-dlp%b\n" "$RED" "$CLR"
         exit 1
     fi
 fi
@@ -139,11 +165,11 @@ rawaudio=$(find "$yttranscribe_cache_folder" -name "rawaudio_$yturl_clean*")
 ytdl_video_outfile="$yttranscribe_cache_folder/rawvideo_$yturl_clean.%(ext)s"
 rawvideo=$(find "$yttranscribe_cache_folder" -name "rawvideo_$yturl_clean*")
 if [ -n "$thumbs" ] && [ -z "$rawvideo" ]; then
-    printf "\033[32mdownloading talk video\033[0m\n"
+    printf "%bdownloading talk video%b\n" "$GREEN" "$CLR"
     if ! yt-dlp -f bv "$1" \
         "${ytdlpquiet[@]}" \
         -o "$ytdl_video_outfile"; then
-        printf "\033[31mfailed running yt-dlp\033[0m\n"
+        printf "%bfailed running yt-dlp%b\n" "$RED" "$CLR"
         exit 1
     fi
 fi
@@ -153,19 +179,20 @@ rawvideo=$(find "$yttranscribe_cache_folder" -name "rawvideo_$yturl_clean*")
 # convert into 16-bit wav file if we haven't yet
 wavfile="$yttranscribe_cache_folder/audio_$yturl_clean.wav"
 if [ ! -f "$wavfile" ]; then
-    printf "\033[32mconverting to wav\033[0m\n"
+    printf "%bconverting to wav%b\n" "$GREEN" "$CLR"
     if ! ffmpeg -y "${ffmpegquiet[@]}" \
         -i "${rawaudio}" \
         -ar 16000 -ac 1 -c:a pcm_s16le \
         "$wavfile"; then
-        printf "\033[31mfailed running ffmpeg\033[0m\n"
+        printf "%bfailed running ffmpeg%b\n" "$RED" "$CLR"
         exit 1
     fi
 fi
 
-# Create an HTML file to display. We'll add the text of the talk in the next
-# branch
-transcript_html="$yttranscribe_cache_folder/$yturl_clean.html"
+# Create an HTML file to display. We'll add the text of the talk in the
+# next branch
+htmldir="${outdir:-yttranscribe_cache_folder}"
+transcript_html="${htmldir}/${outfile:-yturl_clean.html}"
 cat <<EOF >"$transcript_html"
 <html><head>
 <meta charset="utf-8">
@@ -206,13 +233,13 @@ if [ -z "$thumbs" ]; then
     # name but it does not
     transcript="$yttranscribe_cache_folder/audio_$yturl_clean.txt"
     if [ ! -f "$transcript" ]; then
-        printf "\033[32mtranscribing\033[0m\n"
+        printf "%btranscribing%b\n" "$GREEN" "$CLR"
         if ! mlx_whisper --model 'mlx-community/distil-whisper-large-v3' \
                  -f txt \
                  -o "$yttranscribe_cache_folder" \
                  --verbose False \
                  "$wavfile"; then
-            printf "\033[31mfailed running whisper.cpp\033[0m\n"
+            printf "%bfailed running whisper.cpp%b\n" "$RED" "$CLR"
             exit 1
         fi
     fi
@@ -240,14 +267,14 @@ else
     # transcribe the video into json format, clipping at 30-second intervals
     transcript="$yttranscribe_cache_folder/audio_$yturl_clean.json"
     if [ ! -f "$transcript" ]; then
-        printf "\033[32mtranscribing\033[0m\n"
+        printf "%btranscribing%b\n" "$GREEN" "$CLR"
         if ! mlx_whisper --model 'mlx-community/distil-whisper-large-v3' \
                  -f json \
                  -o "$yttranscribe_cache_folder" \
                  --verbose False \
                  --clip-timestamps "${intervals[@]}" \
                  "$wavfile"; then
-            printf "\033[31mfailed running whisper.cpp\033[0m\n"
+            printf "%bfailed running whisper.cpp%b\n" "$RED" "$CLR"
             exit 1
         fi
     fi
@@ -255,7 +282,7 @@ else
     # Now loop through the intervals and output the HTML accordingly
     for ((i=0; i<="$duration_sec"; i+=thumbinterval)); do
         imgName="${yturl_clean}_thumb_$i.jpg"
-        img="$yttranscribe_cache_folder/$imgName"
+        img="$htmldir/$imgName"
         # I tried to find a video filter here that would avoid the initial
         # black frame I'm seeing, but was unsuccessful. Some attempts:
         #
@@ -269,6 +296,9 @@ else
             -vf "select='eq(n,0)+eq(pict_type,PICT_TYPE_I)+gt(scene,0.3)',scale=320:240,unsharp" \
             -vframes 1 -q:v 2 "$img" -y &> /dev/null
         printf '<img src="./%s"><p>' "$imgName" >> "$transcript_html"
+
+        # pull the segment transcript(s) out of the json file and write
+        # them to the HTML output
         segment=$(jq -r $"[.segments[] |
                            select(.start >= $i and .start < $((i+thumbinterval))).text] |
                           join(\"<p>\n\")" "$transcript")
