@@ -26,6 +26,8 @@ Transcribe a youtube video into an easily readable HTML file
 OPTIONS
 
   -help:          print this message
+  -outdir:        the directory to put the output files in. [default /tmp/yttranscribe_cache]
+  -outfile:       the name of the output HTML file
   -thumbs:        enable thumbnail generation
   -thumbinterval: the interval between thumbnails, in seconds [default 30]
   -v:             print more verbose output
@@ -37,8 +39,8 @@ Assumes you have installed:
 - ffmpeg
 - jq
 - mlx_whisper
-- yt-dlp
 - python
+- yt-dlp
 
 To install all on a mac:
 
@@ -57,6 +59,10 @@ Transcribe a video and insert thumbnails every 30 seconds (the default):
 Transcribe a video and insert thumbnails every 10 seconds:
 
     yt-transcribe -thumbs -thumbinterval 10 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
+
+Transcribe a video to the 'look-around-you' directory, with a filename 'water.html':
+
+    yt-transcribe -thumbs -outdir ./look-around-you -outfile water.html 'https://www.youtube.com/watch?v=gaI6kBVyu00'
 
 source: https://github.com/llimllib/yt-transcribe
 ```
