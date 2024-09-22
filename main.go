@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"os/user"
@@ -11,7 +13,9 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-audio/wav"
 	"github.com/llimllib/yt-transcribe/whisper"
@@ -124,9 +128,11 @@ func main() {
 
 	var transcriber Transcriber
 
-	if exists("mlx_whisper") {
+	if commandExists("mlx_whisper") {
+		log.Debug("transcriber: mlx_whisper")
 		transcriber = NewMlxWhisper(opts, video, log)
 	} else {
+		log.Debug("transcriber: built-in")
 		// XXX: add option to use mlx_whisper instead of whisper.cpp
 		// XXX: test perf of each
 		transcriber = NewWhisper(opts, video, log)
@@ -205,6 +211,10 @@ func (l Log) Info(msg ...string) {
 	fmt.Printf("%s%s%s\n", GREEN, strings.Join(msg, " "), RESET)
 }
 
+func (l Log) Error(err error, context string) {
+	fmt.Printf("%s%s%s\n%s\n", RED, err, RESET, context)
+}
+
 func must(err error) {
 	if err != nil {
 		panic(err)
@@ -225,6 +235,7 @@ func sanitizeURL(url string) string {
 
 func sh(log *Log, name string, args ...string) string {
 	log.Debug(append([]string{name}, args...)...)
+	t1 := time.Now()
 	cmd := exec.Command(name, args...)
 	output, err := cmd.Output()
 	if err != nil {
@@ -245,6 +256,8 @@ func sh(log *Log, name string, args ...string) string {
 		}
 		os.Exit(1)
 	}
+	t2 := time.Now()
+	log.Debug(fmt.Sprintf("command took: %s", t2.Sub(t1)))
 	return strings.TrimSpace(string(output))
 }
 
@@ -281,6 +294,13 @@ func (t Fetcher) getVideoTitle() string {
 func exists(f string) bool {
 	_, err := os.Stat(f)
 	return !os.IsNotExist(err)
+}
+
+// commandExists returns true if an executable named 'file' exists on PATH.
+// Disregard any errors.
+func commandExists(file string) bool {
+	path, err := exec.LookPath(file)
+	return err == nil && path != ""
 }
 
 // getAudio downloads the video's audio stream with yt-dlp and returns
@@ -324,34 +344,87 @@ type Transcriber interface {
 	GetFullText() string
 }
 
+type MlxSegment struct {
+	ID    float64 `json:"id"`
+	Seek  float64 `json:"seek"`
+	Start float64 `json:"start"`
+	End   float64 `json:"end"`
+	Text  string  `json:"text"`
+}
+
+type MlxJson struct {
+	Text     string       `json:"text"`
+	Language string       `json:"language"`
+	Segments []MlxSegment `json:"segments"`
+}
+
 type MlxWhisper struct {
-	opts  Options
-	video Video
-	log   *Log
+	opts           Options
+	video          Video
+	log            *Log
+	transcriptFile string
 }
 
 func NewMlxWhisper(opts Options, video Video, log *Log) *MlxWhisper {
-	return &MlxWhisper{opts, video, log}
+	return &MlxWhisper{opts: opts, video: video, log: log}
 }
 
-func (w MlxWhisper) Transcribe(audioFile string) {
-	cmd := exec.Command("mlx_whisper",
-		"--model", "mlx-community/distil-whisper-large-v3",
-		"-f", "txt",
-		"-o", filepath.Join(w.opts.cacheDir, fmt.Sprintf("audio_%s.json", w.video.sanitizedURL)),
-		"--verbose", "false",
-		audioFile)
-	cmd.Run()
-	// TODO: the transcript is now in cacheDir/audio_%s.json.txt. Save a reference to it somewhere here maybe?
-	// this is where I left off
+func (w *MlxWhisper) Transcribe(audioFile string) {
+	// mlx_whisper doesn't let you control the exact output filename; instead
+	// it outputs to the specified output directory with a modified version of
+	// the file name - replacing the extension with .json
+	outfile := filepath.Join(
+		filepath.Dir(audioFile),
+		filepath.Base(audioFile[:len(audioFile)-len(filepath.Ext(audioFile))])+".json")
+	w.log.Debug("output file:", outfile)
+	w.transcriptFile = outfile
+
+	if w.opts.thumbs {
+		duration := sh(w.log, "ffprobe",
+			"-v", "error",
+			"-show_entries", "format=duration",
+			"-of", "default=noprint_wrappers=1:nokey=1",
+			audioFile)
+
+		i := 0
+		intervals := []string{"0", strconv.Itoa(w.opts.thumbInterval)}
+		for i < must1(strconv.Atoi(duration)) {
+			intervals = append(intervals, strconv.Itoa(i), strconv.Itoa(i+w.opts.thumbInterval))
+			i += w.opts.thumbInterval
+		}
+		intervalStr := strings.Join(append(intervals, strconv.Itoa(i)), ",")
+
+		sh(w.log, "mlx_whisper",
+			"--model", "mlx-community/distil-whisper-large-v3",
+			"-f", "json",
+			"-o", w.opts.cacheDir,
+			"--verbose", "False",
+			"--clip-timestamps", intervalStr,
+			audioFile)
+	} else {
+		sh(w.log, "mlx_whisper",
+			"--model", "mlx-community/distil-whisper-large-v3",
+			"-f", "json",
+			"-o", w.opts.cacheDir,
+			"--verbose", "False",
+			audioFile)
+	}
 }
 
 func (w MlxWhisper) GetSegments(start, end int64) []string {
-	return []string{"TODO"}
+	var whisperData MlxJson
+	must(json.Unmarshal(must1(os.ReadFile(w.transcriptFile)), &whisperData))
+	segments := []string{}
+	for _, segment := range whisperData.Segments {
+		segments = append(segments, segment.Text)
+	}
+	return segments
 }
 
 func (w MlxWhisper) GetFullText() string {
-	return "TODO"
+	var whisperData MlxJson
+	must(json.Unmarshal(must1(os.ReadFile(w.transcriptFile)), &whisperData))
+	return whisperData.Text
 }
 
 type Whisper struct {
@@ -366,7 +439,7 @@ func NewWhisper(opts Options, video Video, log *Log) *Whisper {
 	model := filepath.Join(must1(user.Current()).HomeDir, ".local/share/blisper/ggml-large.bin")
 	return &Whisper{
 		log:     log,
-		whisper: whisper.New(model, false),
+		whisper: whisper.New(model, !opts.verbose),
 	}
 }
 
@@ -391,13 +464,15 @@ func (w *Whisper) Transcribe(audioFile string) {
 	// tanks performance if you do. Citation:
 	// https://github.com/ggerganov/whisper.cpp/discussions/312#discussioncomment-6318849
 	w.log.Info("transcribing")
+	t1 := time.Now()
 
 	fh := must1(os.Open(audioFile))
 	samples := must1(readWav(fh))
 	segments := must1(w.whisper.Transcribe(samples, runtime.NumCPU()))
 	w.segments = segments
 
-	w.log.Info("transcription complete")
+	t2 := time.Now()
+	w.log.Info("transcription complete:", fmt.Sprintf("%s", t2.Sub(t1)))
 }
 
 // GetSegments returns a string representing the concatenated text of every
@@ -483,7 +558,9 @@ p {
 </head><body><p><em>transcription of <a href="%s">%s</a></em><p>
 `, h.video.title, h.video.URL, h.video.title))
 	// TODO: handle thumbs case
-	must1(fmt.Fprint(transcriptHTML, h.transcriber.GetFullText()))
+	for _, segment := range h.transcriber.GetSegments(0, math.MaxInt) {
+		must1(fmt.Fprintf(transcriptHTML, "%s<p>\n", segment))
+	}
 	must1(fmt.Fprintf(transcriptHTML, `<p><em><a href="https://github.com/llimllib/yt-transcribe">generated by yt-transcribe</a></em></body>`))
 
 	return transcriptPath
