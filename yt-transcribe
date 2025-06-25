@@ -94,7 +94,7 @@ while true; do
             outfile=$2
             shift 2
         ;;
-        -help)
+        -help|--help)
             usage
         ;;
         *)
