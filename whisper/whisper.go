@@ -51,8 +51,10 @@ func (b *Whisper) Transcribe(samples []float32, threads int) ([]Segment, error) 
 		}
 	}
 
+	cparams := C.whisper_context_default_params()
+
 	// construct a whisper context from a model file
-	ctx := C.whisper_init_from_file(C.CString(b.Model))
+	ctx := C.whisper_init_from_file_with_params(C.CString(b.Model), (C.struct_whisper_context_params)(cparams))
 	if ctx == nil {
 		return nil, fmt.Errorf("unable to init context")
 	}

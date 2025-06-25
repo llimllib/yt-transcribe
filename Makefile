@@ -12,15 +12,13 @@ endif
 # XXX
 CC := /opt/homebrew/Cellar/llvm/18.1.8/bin/clang
 
+# C_LIBRARY_PATH and LIBRARY_PATH must be set to point to directories
+# containing whisper and ggml headers and libwhisper.a file, respectively
 bin/yt-transcribe: $(GOFILES)
-	C_INCLUDE_PATH=$(LIBWHISPER)/include \
-	LIBRARY_PATH=$(LIBWHISPER)/lib \
 		go build -o bin/yt-transcribe .
 
 .PHONY: install
 install:
-	C_INCLUDE_PATH=$(LIBWHISPER)/include \
-	LIBRARY_PATH=$(LIBWHISPER)/lib \
 		go install
 
 .PHONY: watch

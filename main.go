@@ -133,8 +133,6 @@ func main() {
 		transcriber = NewMlxWhisper(opts, video, log)
 	} else {
 		log.Debug("transcriber: built-in")
-		// XXX: add option to use mlx_whisper instead of whisper.cpp
-		// XXX: test perf of each
 		transcriber = NewWhisper(opts, video, log)
 	}
 	transcriber.Transcribe(audioFile)
@@ -229,6 +227,13 @@ func must1[T any](value T, err error) T {
 	return value
 }
 
+func must2[T any, U any](val1 T, val2 U, err error) (T, U) {
+	if err != nil {
+		panic(err)
+	}
+	return val1, val2
+}
+
 func sanitizeURL(url string) string {
 	return regexp.MustCompile("[^a-zA-Z0-9]").ReplaceAllString(url, "")
 }
@@ -318,6 +323,8 @@ func (t Fetcher) getAudio() string {
 		"-o", audioFile,
 		// tell yt-dlp to use ffmpeg to set the sample rate to 16khz and
 		// channels to 1, the format required by whisper.cpp
+		// XXX: does this introduce a dependency on ffmpeg, does yt-dlp link
+		// it, or does yt-dlp already depend on it? Unclear to me
 		"--postprocessor-args", "-ar 16000 -ac 1",
 		t.video.URL)
 
@@ -369,6 +376,14 @@ func NewMlxWhisper(opts Options, video Video, log *Log) *MlxWhisper {
 	return &MlxWhisper{opts: opts, video: video, log: log}
 }
 
+// getWavDuration returns the duration of wavFile in seconds
+func getWavDuration(wavFile string) int {
+	file := must1(os.Open(wavFile))
+	defer file.Close()
+
+	return int(math.Ceil(must1(wav.NewDecoder(file).Duration()).Seconds()))
+}
+
 func (w *MlxWhisper) Transcribe(audioFile string) {
 	// mlx_whisper doesn't let you control the exact output filename; instead
 	// it outputs to the specified output directory with a modified version of
@@ -380,15 +395,9 @@ func (w *MlxWhisper) Transcribe(audioFile string) {
 	w.transcriptFile = outfile
 
 	if w.opts.thumbs {
-		duration := sh(w.log, "ffprobe",
-			"-v", "error",
-			"-show_entries", "format=duration",
-			"-of", "default=noprint_wrappers=1:nokey=1",
-			audioFile)
-
 		i := 0
 		intervals := []string{"0", strconv.Itoa(w.opts.thumbInterval)}
-		for i < must1(strconv.Atoi(duration)) {
+		for i < getWavDuration(audioFile) {
 			intervals = append(intervals, strconv.Itoa(i), strconv.Itoa(i+w.opts.thumbInterval))
 			i += w.opts.thumbInterval
 		}
@@ -413,6 +422,7 @@ func (w *MlxWhisper) Transcribe(audioFile string) {
 
 func (w MlxWhisper) GetSegments(start, end int64) []string {
 	var whisperData MlxJson
+	w.log.Debug("attempting to open", w.transcriptFile)
 	must(json.Unmarshal(must1(os.ReadFile(w.transcriptFile)), &whisperData))
 	segments := []string{}
 	for _, segment := range whisperData.Segments {
@@ -472,7 +482,7 @@ func (w *Whisper) Transcribe(audioFile string) {
 	w.segments = segments
 
 	t2 := time.Now()
-	w.log.Info("transcription complete:", fmt.Sprintf("%s", t2.Sub(t1)))
+	w.log.Info("transcription complete:", t2.Sub(t1).String())
 }
 
 // GetSegments returns a string representing the concatenated text of every
