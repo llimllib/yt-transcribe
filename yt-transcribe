@@ -14,6 +14,7 @@ OPTIONS
   -outfile:       the name of the output HTML file
   -thumbs:        enable thumbnail generation
   -thumbinterval: the interval between thumbnails, in seconds [default 30]
+  -thumbwidth:    the width of the thumbnails, defaults to 640
   -v:             print more verbose output
 
 DEPENDENCIES
@@ -68,6 +69,7 @@ thumbs=
 thumbinterval=30 # default 30s between thumbs
 outdir=
 outfile=
+thumbwidth=640
 
 # parse command line arguments
 while true; do
@@ -84,6 +86,10 @@ while true; do
         ;;
         -thumbinterval)
             thumbinterval=$2
+            shift 2
+        ;;
+        -thumbwidth)
+            thumbwidth=$2
             shift 2
         ;;
         -outdir)
@@ -292,7 +298,7 @@ else
         # instaed I'm just pulling the frame from 1 second into the segment
         # instead of zero, which is a pretty lame thing to do
         ffmpeg -ss "$((i+1))" -i "$rawvideo" \
-            -vf "select='eq(n,0)+eq(pict_type,PICT_TYPE_I)+gt(scene,0.3)',scale=320:240,unsharp" \
+            -vf "select='eq(n,0)+eq(pict_type,PICT_TYPE_I)+gt(scene,0.3)',scale=${thumbwidth}:-1,unsharp" \
             -vframes 1 -q:v 2 "$img" -y &> /dev/null
         printf '<img src="./%s"><p>' "$imgName" >> "$transcript_html"
 
