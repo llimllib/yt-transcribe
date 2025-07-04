@@ -9,13 +9,14 @@ Transcribe a youtube video into an easily readable HTML file
 
 OPTIONS
 
-  -help:          print this message
-  -outdir:        the directory to put the output files in. [default /tmp/yttranscribe_cache]
-  -outfile:       the name of the output HTML file
-  -thumbs:        enable thumbnail generation
-  -thumbinterval: the interval between thumbnails, in seconds [default 30]
-  -thumbwidth:    the width of the thumbnails, defaults to 640
-  -v:             print more verbose output
+    -help:          print this message
+    -model:         specify the whisper model to use [default mlx-community/distil-whisper-large-v3]
+    -outdir:        the directory to put the output files in. [default /tmp/yttranscribe_cache]
+    -outfile:       the name of the output HTML file
+    -thumbs:        enable thumbnail generation
+    -thumbinterval: the interval between thumbnails, in seconds [default 30]
+    -thumbwidth:    the width of the thumbnails, defaults to 640
+    -v:             print more verbose output
 
 DEPENDENCIES
 
@@ -44,10 +45,13 @@ Transcribe a video and insert thumbnails every 30 seconds (the default):
 Transcribe a video and insert thumbnails every 10 seconds:
 
     yt-transcribe -thumbs -thumbinterval 10 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
-
 Transcribe a video to the 'look-around-you' directory, with a filename 'water.html':
 
     yt-transcribe -thumbs -outdir ./look-around-you -outfile water.html 'https://www.youtube.com/watch?v=gaI6kBVyu00'
+
+Transcribe a video using a different whisper model:
+
+    yt-transcribe -model 'mlx-community/whisper-large-v3' 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
 
 source: https://github.com/llimllib/yt-transcribe
 EOF
@@ -68,7 +72,8 @@ ytdlpquiet=(--quiet)
 thumbs=
 thumbinterval=30 # default 30s between thumbs
 outdir=
-outfile=
+thumbwidth=640
+model='mlx-community/distil-whisper-large-v3'
 thumbwidth=640
 
 # parse command line arguments
@@ -98,6 +103,10 @@ while true; do
         ;;
         -outfile)
             outfile=$2
+            shift 2
+        ;;
+        -model)
+            model=$2
             shift 2
         ;;
         -help|--help)
@@ -147,8 +156,22 @@ if [ ! -d $yttranscribe_cache_folder ]; then
     mkdir $yttranscribe_cache_folder
 fi
 
-# get the video title
+# get the video title. Sometimes yt-dlp fails but manages to return the title
+# anyway, so proceed if it returns non-zero exit code but also a video title
+# https://github.com/yt-dlp/yt-dlp/issues/13635
+set +e
 title=$(yt-dlp --skip-download --print title "$1")
+yt_exit_code=$?
+set -e  # Re-enable exit-on-error
+
+# Proceed if we got a title, regardless of exit code
+if [[ -n "$title" ]]; then
+    echo "Title obtained: $title"
+    # Continue with your script...
+else
+    echo "Failed to get title, exit code: $yt_exit_code" >&2
+    exit 1
+fi
 
 # download audio of talk if we haven't yet
 ytdl_audio_outfile="$yttranscribe_cache_folder/rawaudio_$yturl_clean.%(ext)s"
@@ -239,12 +262,12 @@ if [ -z "$thumbs" ]; then
     transcript="$yttranscribe_cache_folder/audio_$yturl_clean.txt"
     if [ ! -f "$transcript" ]; then
         printf "%btranscribing%b\n" "$GREEN" "$CLR"
-        if ! mlx_whisper --model 'mlx-community/distil-whisper-large-v3' \
+        if ! mlx_whisper --model "$model" \
                  -f txt \
                  -o "$yttranscribe_cache_folder" \
                  --verbose False \
                  "$wavfile"; then
-            printf "%bfailed running whisper.cpp%b\n" "$RED" "$CLR"
+            printf "%bfailed running mlx_whisper%b\n" "$RED" "$CLR"
             exit 1
         fi
     fi
@@ -273,13 +296,13 @@ else
     transcript="$yttranscribe_cache_folder/audio_$yturl_clean.json"
     if [ ! -f "$transcript" ]; then
         printf "%btranscribing%b\n" "$GREEN" "$CLR"
-        if ! mlx_whisper --model 'mlx-community/distil-whisper-large-v3' \
+        if ! mlx_whisper --model "$model" \
                  -f json \
                  -o "$yttranscribe_cache_folder" \
                  --verbose False \
                  --clip-timestamps "${intervals[@]}" \
                  "$wavfile"; then
-            printf "%bfailed running whisper.cpp%b\n" "$RED" "$CLR"
+            printf "%bfailed running mlx_whisper%b\n" "$RED" "$CLR"
             exit 1
         fi
     fi
