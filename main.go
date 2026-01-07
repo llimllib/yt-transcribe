@@ -107,7 +107,7 @@ func main() {
 			"\nhttps://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#installation")
 	}
 
-	if err := os.MkdirAll(opts.outDir, 0755); err != nil {
+	if err := os.MkdirAll(opts.outDir, 0o755); err != nil {
 		fmt.Printf("Error creating output directory: %v\n", err)
 		return
 	}
@@ -137,11 +137,8 @@ func main() {
 	}
 	transcriber.Transcribe(audioFile)
 
-	// TODO: output something
-	var formatter Formatter
-
 	// XXX: add console formatter?
-	formatter = NewHTMLFormatter(opts, video, transcriber, log)
+	formatter := NewHTMLFormatter(opts, video, transcriber, log)
 	open(formatter.Format())
 }
 
@@ -359,7 +356,7 @@ type MlxSegment struct {
 	Text  string  `json:"text"`
 }
 
-type MlxJson struct {
+type MlxJSON struct {
 	Text     string       `json:"text"`
 	Language string       `json:"language"`
 	Segments []MlxSegment `json:"segments"`
@@ -421,7 +418,7 @@ func (w *MlxWhisper) Transcribe(audioFile string) {
 }
 
 func (w MlxWhisper) GetSegments(start, end int64) []string {
-	var whisperData MlxJson
+	var whisperData MlxJSON
 	w.log.Debug("attempting to open", w.transcriptFile)
 	must(json.Unmarshal(must1(os.ReadFile(w.transcriptFile)), &whisperData))
 	segments := []string{}
@@ -432,7 +429,7 @@ func (w MlxWhisper) GetSegments(start, end int64) []string {
 }
 
 func (w MlxWhisper) GetFullText() string {
-	var whisperData MlxJson
+	var whisperData MlxJSON
 	must(json.Unmarshal(must1(os.ReadFile(w.transcriptFile)), &whisperData))
 	return whisperData.Text
 }
@@ -469,6 +466,8 @@ func readWav(fh *os.File) ([]float32, error) {
 
 // XXX: idea, can we use purego here to avoid cgo and be able to cross-compile
 // to windows? https://github.com/ebitengine/purego
+
+// Transcribe transcribes an audio file into w.segments
 func (w *Whisper) Transcribe(audioFile string) {
 	// It would be cool to have progress shown by whisper, but it absolutely
 	// tanks performance if you do. Citation:
