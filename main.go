@@ -57,13 +57,17 @@ type Options struct {
 	outFile       string
 	thumbs        bool
 	thumbInterval int
+	thumbWidth    int
 	verbose       bool
 }
 
 type Video struct {
-	sanitizedURL string
-	title        string
-	URL          string
+	sanitizedURL  string
+	title         string
+	localFilename string
+	// thumbnails is a list of filenames for thumbnail images
+	thumbnails []string
+	URL        string
 }
 
 func main() {
@@ -74,6 +78,7 @@ func main() {
 	flag.StringVar(&opts.outFile, "outfile", "", "The name of the output HTML file")
 	flag.BoolVar(&opts.thumbs, "thumbs", false, "Enable thumbnail generation")
 	flag.IntVar(&opts.thumbInterval, "thumbinterval", 30, "The interval between thumbnails, in seconds")
+	flag.IntVar(&opts.thumbWidth, "thumbwidth", 640, "The width of the extracted thumbnail images")
 	flag.BoolVar(&opts.verbose, "v", false, "Print more verbose output")
 	flag.Parse()
 
@@ -120,11 +125,11 @@ func main() {
 	log.Debug(fmt.Sprintf("audio file: %s", audioFile))
 
 	if opts.thumbs {
-		videoFile := fetcher.getVideo()
-		log.Debug(fmt.Sprintf("video file: %s", videoFile))
+		video.localFilename = fetcher.getVideo()
+		log.Debug(fmt.Sprintf("video file: %s", video.localFilename))
+		thumbnailer := NewFFmpegThumbnailer(opts, video, log)
+		video.thumbnails = thumbnailer.GetThumbnails()
 	}
-
-	// XXX: get thumbs from video here
 
 	var transcriber Transcriber
 
@@ -136,6 +141,10 @@ func main() {
 		transcriber = NewWhisper(opts, video, log)
 	}
 	transcriber.Transcribe(audioFile)
+
+	// XXX: Should there be a "transcribe neaten" step, where we optionally use
+	// an LLM to group the sentences into paragraphs so it reads better, or
+	// something like that?
 
 	// XXX: add console formatter?
 	formatter := NewHTMLFormatter(opts, video, transcriber, log)
@@ -331,15 +340,108 @@ func (t Fetcher) getAudio() string {
 // getVideo downloads the video's video stream with yt-dlp and returns
 // the file name of the output
 func (t Fetcher) getVideo() string {
-	// TODO: I don't think the %(ext)s format is right here. FIXME
-	videoFile := filepath.Join(t.opts.outDir, fmt.Sprintf("rawvideo_%s.%%(ext)s", t.video.sanitizedURL))
-	if exists(videoFile) {
-		return videoFile
+	// Check if we already have a downloaded video file
+	videoPattern := filepath.Join(t.opts.outDir, fmt.Sprintf("rawvideo_%s.*", t.video.sanitizedURL))
+	matches := must1(filepath.Glob(videoPattern))
+	if len(matches) > 0 {
+		return matches[0]
 	}
 
 	t.log.Info("downloading video")
-	sh(t.log, "yt-dlp", "-f", "bv", t.video.URL, "-o", videoFile)
-	return videoFile
+	videoTemplate := filepath.Join(t.opts.outDir, fmt.Sprintf("rawvideo_%s.%%(ext)s", t.video.sanitizedURL))
+	sh(t.log, "yt-dlp", "-f", "bv", t.video.URL, "-o", videoTemplate)
+
+	// Get the filename of the downloaded file - yt-dlp has replaced %(ext)s
+	// with the video's extension
+	matches = must1(filepath.Glob(videoPattern))
+	if len(matches) == 0 {
+		die(red(fmt.Sprintf("failed to find downloaded video file matching %s", videoPattern)))
+	}
+	return matches[0]
+}
+
+type Thumbnailer interface {
+	// GetThumbnails takes an interval on which to pull thumbnails, and returns
+	// a list of filenames for the extracted thumbnails
+	GetThumbnails() []string
+}
+
+type FFmpegThumbnailer struct {
+	opts  Options
+	video Video
+	log   *Log
+}
+
+func NewFFmpegThumbnailer(opts Options, video Video, log *Log) *FFmpegThumbnailer {
+	return &FFmpegThumbnailer{
+		opts:  opts,
+		video: video,
+		log:   log,
+	}
+}
+
+func (f *FFmpegThumbnailer) GetThumbnails() []string {
+	f.log.Info("extracting thumbnails")
+
+	// Get video duration using ffprobe
+	durationStr := sh(f.log, "ffprobe",
+		"-v", "error",
+		"-show_entries", "format=duration",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		f.video.localFilename)
+
+	duration, err := strconv.ParseFloat(durationStr, 64)
+	if err != nil {
+		f.log.Error(err, "failed to parse video duration")
+		return []string{}
+	}
+
+	// Create thumbnails directory
+	thumbDir := filepath.Join(f.opts.cacheDir, fmt.Sprintf("thumbs_%s", f.video.sanitizedURL))
+	if err := os.MkdirAll(thumbDir, 0o755); err != nil {
+		f.log.Error(err, "failed to create thumbnail directory")
+		return []string{}
+	}
+
+	thumbnails := []string{}
+
+	// Extract thumbnails at each interval
+	for i := 0.0; i < duration; i += float64(f.opts.thumbInterval) {
+		thumbFile := filepath.Join(thumbDir, fmt.Sprintf("thumb_%06d.jpg", int(i)))
+
+		// Skip if thumbnail already exists
+		if exists(thumbFile) {
+			thumbnails = append(thumbnails, thumbFile)
+			continue
+		}
+
+		// Extract thumbnail at this timestamp
+		// Use i+1 to skip past potential black frames at segment boundaries
+		timestamp := i + 1.0
+		if timestamp >= duration {
+			timestamp = duration - 1.0
+		}
+
+		// Use video filter to:
+		// - Select better frames (I-frames or frames with scene changes)
+		// - Scale to desired width while maintaining aspect ratio
+		// - Apply unsharp mask for better quality
+		vfilter := fmt.Sprintf("select='eq(n,0)+eq(pict_type,PICT_TYPE_I)+gt(scene,0.3)',scale=%d:-1,unsharp", f.opts.thumbWidth)
+
+		sh(f.log, "ffmpeg",
+			"-ss", fmt.Sprintf("%.2f", timestamp),
+			"-i", f.video.localFilename,
+			"-vf", vfilter,
+			"-vframes", "1",
+			"-q:v", "2",
+			"-y",
+			thumbFile)
+
+		thumbnails = append(thumbnails, thumbFile)
+	}
+
+	f.log.Info(fmt.Sprintf("extracted %d thumbnails", len(thumbnails)))
+	return thumbnails
 }
 
 type Transcriber interface {
@@ -392,13 +494,13 @@ func (w *MlxWhisper) Transcribe(audioFile string) {
 	w.transcriptFile = outfile
 
 	if w.opts.thumbs {
-		i := 0
 		intervals := []string{"0", strconv.Itoa(w.opts.thumbInterval)}
+		i := w.opts.thumbInterval
 		for i < getWavDuration(audioFile) {
 			intervals = append(intervals, strconv.Itoa(i), strconv.Itoa(i+w.opts.thumbInterval))
 			i += w.opts.thumbInterval
 		}
-		intervalStr := strings.Join(append(intervals, strconv.Itoa(i)), ",")
+		intervalStr := strings.Join(intervals, ",")
 
 		sh(w.log, "mlx_whisper",
 			"--model", "mlx-community/distil-whisper-large-v3",
@@ -566,8 +668,10 @@ p {
 <title>%s - transcription by yt-transcribe</title>
 </head><body><p><em>transcription of <a href="%s">%s</a></em><p>
 `, h.video.title, h.video.URL, h.video.title))
-	// TODO: handle thumbs case
-	for _, segment := range h.transcriber.GetSegments(0, math.MaxInt) {
+	for i, segment := range h.transcriber.GetSegments(0, math.MaxInt) {
+		if h.video.thumbnails != nil && len(h.video.thumbnails) > i {
+			must1(fmt.Fprintf(transcriptHTML, "<img src=\"%s\"><p>", h.video.thumbnails[i]))
+		}
 		must1(fmt.Fprintf(transcriptHTML, "%s<p>\n", segment))
 	}
 	must1(fmt.Fprintf(transcriptHTML, `<p><em><a href="https://github.com/llimllib/yt-transcribe">generated by yt-transcribe</a></em></body>`))
