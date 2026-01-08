@@ -66,6 +66,7 @@ type Video struct {
 	durationMicroseconds int64
 	sanitizedURL         string
 	title                string
+	description          string
 	localFilename        string
 	// thumbnails is a list of filenames for thumbnail images
 	thumbnails []string
@@ -108,20 +109,15 @@ func main() {
 
 	log.Debug("flags", fmt.Sprintf("%#v", opts))
 
-	// Verify that yt-dlp is available
-	if !isInstalled("yt-dlp") {
-		die(red("yt-dlp is not available, please install it.") +
-			"\nhttps://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#installation")
-	}
-
 	if err := os.MkdirAll(opts.outDir, 0o755); err != nil {
 		fmt.Printf("Error creating output directory: %v\n", err)
 		return
 	}
 	fetcher := NewFetcher(opts, &video, log)
 
-	video.title = fetcher.getVideoTitle()
+	fetcher.getVideoMetadata()
 	log.Debug(fmt.Sprintf("title: %s", video.title))
+	log.Debug(fmt.Sprintf("description: %s", video.description))
 
 	audioFile := fetcher.getAudio()
 	log.Debug(fmt.Sprintf("audio file: %s", audioFile))
@@ -281,6 +277,12 @@ type Fetcher struct {
 }
 
 func NewFetcher(opts Options, video *Video, log *Log) *Fetcher {
+	// Verify that yt-dlp is available
+	if !isInstalled("yt-dlp") {
+		die(red("yt-dlp is not available, please install it.") +
+			"\nhttps://github.com/yt-dlp/yt-dlp?tab=readme-ov-file#installation")
+	}
+
 	return &Fetcher{
 		log:   log,
 		opts:  opts,
@@ -288,19 +290,44 @@ func NewFetcher(opts Options, video *Video, log *Log) *Fetcher {
 	}
 }
 
-func (t Fetcher) getVideoTitle() string {
-	titleFile := filepath.Join(t.opts.cacheDir, fmt.Sprintf("title_%s.txt", t.video.sanitizedURL))
-	if exists(titleFile) {
-		return string(must1(os.ReadFile(titleFile)))
+type VideoMetadata struct {
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Duration    float64 `json:"duration"` // duration in seconds
+	UploadDate  string  `json:"upload_date"`
+	Uploader    string  `json:"uploader"`
+	Channel     string  `json:"channel"`
+}
+
+func (t *Fetcher) getVideoMetadata() {
+	metadataFile := filepath.Join(t.opts.cacheDir, fmt.Sprintf("metadata_%s.json", t.video.sanitizedURL))
+
+	// Check if we have cached metadata
+	if exists(metadataFile) {
+		var metadata VideoMetadata
+		must(json.Unmarshal(must1(os.ReadFile(metadataFile)), &metadata))
+		t.video.title = metadata.Title
+		t.video.description = metadata.Description
+		t.video.durationMicroseconds = int64(metadata.Duration * 1_000_000)
+		return
 	}
 
-	t.log.Info("getting title")
-	title := sh(t.log, "yt-dlp", "--skip-download", "--print", "title", t.video.URL)
+	t.log.Info("getting video metadata")
+	// Get all metadata in a single yt-dlp call, outputting as JSON
+	output := sh(t.log, "yt-dlp", "--skip-download", "--print",
+		"{\"title\":%(title)j,\"description\":%(description)j,\"duration\":%(duration)j,\"upload_date\":%(upload_date)j,\"uploader\":%(uploader)j,\"channel\":%(channel)j}",
+		t.video.URL)
 
-	file := must1(os.Create(titleFile))
-	defer file.Close()
-	must1(file.WriteString(title))
-	return title
+	var metadata VideoMetadata
+	must(json.Unmarshal([]byte(output), &metadata))
+
+	t.video.title = metadata.Title
+	t.video.description = metadata.Description
+	t.video.durationMicroseconds = int64(metadata.Duration * 1_000_000)
+
+	// Cache the metadata as JSON
+	metadataJSON := must1(json.MarshalIndent(metadata, "", "  "))
+	must(os.WriteFile(metadataFile, metadataJSON, 0o644))
 }
 
 // exists returns true if a file exists
@@ -359,19 +386,8 @@ func (t *Fetcher) getVideo() string {
 	if len(files) == 0 {
 		die(red(fmt.Sprintf("failed to find downloaded video file matching %s", videoPattern)))
 	}
-	videoFilename := files[0]
 
-	// Get video duration using ffprobe, which returns it as a float seconds.
-	// Multiply it by a million to turn it into microseconds, and convert it to
-	// an integer to make it the length in microseconds
-	t.video.durationMicroseconds = int64(must1(strconv.ParseFloat(sh(t.log,
-		"ffprobe", "-v", "error",
-		"-show_entries", "format=duration",
-		"-of", "default=noprint_wrappers=1:nokey=1",
-		videoFilename), 64)) * 1_000_000)
-	t.log.Info("Video duration", strconv.FormatInt(t.video.durationMicroseconds, 10))
-
-	return videoFilename
+	return files[0]
 }
 
 type Thumbnailer interface {
@@ -685,10 +701,28 @@ p {
   overflow-wrap: break-word;
   hyphens: auto;
 }
+details {
+  margin-top: 10px;
+  margin-bottom: 20px;
+  background: #ffddee;
+  padding: 15px;
+}
+summary {
+  cursor: pointer;
+  font-style: italic;
+}
+details p {
+  margin-top: 10px;
+  white-space: pre-wrap;
+}
 </style>
 <title>%s - transcription by yt-transcribe</title>
-</head><body><p><em>transcription of <a href="%s">%s</a></em><p>
-`, h.video.title, h.video.URL, h.video.title))
+</head><body><p><em>transcription of <a href="%s">%s</a></em></p>
+<details>
+<summary>Video Description</summary>
+<p>%s</p>
+</details>
+`, h.video.title, h.video.URL, h.video.title, h.video.description))
 	// Get segments with timestamps to properly match thumbnails
 	segments := h.transcriber.GetSegments(int64(0), h.video.durationMicroseconds)
 
