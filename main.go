@@ -62,9 +62,11 @@ type Options struct {
 }
 
 type Video struct {
-	sanitizedURL  string
-	title         string
-	localFilename string
+	// duration is the video duration in *microseconds*
+	durationMicroseconds int64
+	sanitizedURL         string
+	title                string
+	localFilename        string
 	// thumbnails is a list of filenames for thumbnail images
 	thumbnails []string
 	URL        string
@@ -116,7 +118,7 @@ func main() {
 		fmt.Printf("Error creating output directory: %v\n", err)
 		return
 	}
-	fetcher := NewFetcher(opts, video, log)
+	fetcher := NewFetcher(opts, &video, log)
 
 	video.title = fetcher.getVideoTitle()
 	log.Debug(fmt.Sprintf("title: %s", video.title))
@@ -126,7 +128,7 @@ func main() {
 
 	if opts.thumbs {
 		video.localFilename = fetcher.getVideo()
-		log.Debug(fmt.Sprintf("video file: %s", video.localFilename))
+		log.Debug(fmt.Sprintf("video file: %#v", video))
 		thumbnailer := NewFFmpegThumbnailer(opts, video, log)
 		video.thumbnails = thumbnailer.GetThumbnails()
 	}
@@ -275,10 +277,10 @@ func sh(log *Log, name string, args ...string) string {
 type Fetcher struct {
 	log   *Log
 	opts  Options
-	video Video
+	video *Video
 }
 
-func NewFetcher(opts Options, video Video, log *Log) *Fetcher {
+func NewFetcher(opts Options, video *Video, log *Log) *Fetcher {
 	return &Fetcher{
 		log:   log,
 		opts:  opts,
@@ -339,25 +341,37 @@ func (t Fetcher) getAudio() string {
 
 // getVideo downloads the video's video stream with yt-dlp and returns
 // the file name of the output
-func (t Fetcher) getVideo() string {
+func (t *Fetcher) getVideo() string {
 	// Check if we already have a downloaded video file
 	videoPattern := filepath.Join(t.opts.outDir, fmt.Sprintf("rawvideo_%s.*", t.video.sanitizedURL))
-	matches := must1(filepath.Glob(videoPattern))
-	if len(matches) > 0 {
-		return matches[0]
-	}
+	files := must1(filepath.Glob(videoPattern))
 
-	t.log.Info("downloading video")
-	videoTemplate := filepath.Join(t.opts.outDir, fmt.Sprintf("rawvideo_%s.%%(ext)s", t.video.sanitizedURL))
-	sh(t.log, "yt-dlp", "-f", "bv", t.video.URL, "-o", videoTemplate)
+	// If we don't already have the raw video, download it
+	if len(files) == 0 {
+		t.log.Info("downloading video")
+		videoTemplate := filepath.Join(t.opts.outDir, fmt.Sprintf("rawvideo_%s.%%(ext)s", t.video.sanitizedURL))
+		sh(t.log, "yt-dlp", "-f", "bv", t.video.URL, "-o", videoTemplate)
+	}
 
 	// Get the filename of the downloaded file - yt-dlp has replaced %(ext)s
 	// with the video's extension
-	matches = must1(filepath.Glob(videoPattern))
-	if len(matches) == 0 {
+	files = must1(filepath.Glob(videoPattern))
+	if len(files) == 0 {
 		die(red(fmt.Sprintf("failed to find downloaded video file matching %s", videoPattern)))
 	}
-	return matches[0]
+	videoFilename := files[0]
+
+	// Get video duration using ffprobe, which returns it as a float seconds.
+	// Multiply it by a million to turn it into microseconds, and convert it to
+	// an integer to make it the length in microseconds
+	t.video.durationMicroseconds = int64(must1(strconv.ParseFloat(sh(t.log,
+		"ffprobe", "-v", "error",
+		"-show_entries", "format=duration",
+		"-of", "default=noprint_wrappers=1:nokey=1",
+		videoFilename), 64)) * 1_000_000)
+	t.log.Info("Video duration", strconv.FormatInt(t.video.durationMicroseconds, 10))
+
+	return videoFilename
 }
 
 type Thumbnailer interface {
@@ -383,19 +397,6 @@ func NewFFmpegThumbnailer(opts Options, video Video, log *Log) *FFmpegThumbnaile
 func (f *FFmpegThumbnailer) GetThumbnails() []string {
 	f.log.Info("extracting thumbnails")
 
-	// Get video duration using ffprobe
-	durationStr := sh(f.log, "ffprobe",
-		"-v", "error",
-		"-show_entries", "format=duration",
-		"-of", "default=noprint_wrappers=1:nokey=1",
-		f.video.localFilename)
-
-	duration, err := strconv.ParseFloat(durationStr, 64)
-	if err != nil {
-		f.log.Error(err, "failed to parse video duration")
-		return []string{}
-	}
-
 	// Create thumbnails directory
 	thumbDir := filepath.Join(f.opts.cacheDir, fmt.Sprintf("thumbs_%s", f.video.sanitizedURL))
 	if err := os.MkdirAll(thumbDir, 0o755); err != nil {
@@ -404,6 +405,10 @@ func (f *FFmpegThumbnailer) GetThumbnails() []string {
 	}
 
 	thumbnails := []string{}
+
+	// convert duration from microseconds to seconds
+	duration := float64(f.video.durationMicroseconds) / 1_000_000
+	f.log.Info("duration", fmt.Sprintf("%f", duration), fmt.Sprintf("%d", f.video.durationMicroseconds))
 
 	// Extract thumbnails at each interval
 	for i := 0.0; i < duration; i += float64(f.opts.thumbInterval) {
@@ -452,7 +457,7 @@ type Segment struct {
 
 type Transcriber interface {
 	Transcribe(audioFile string)
-	GetSegments() []Segment
+	GetSegments(start, end int64) []Segment
 	GetFullText() string
 }
 
@@ -525,7 +530,12 @@ func (w *MlxWhisper) Transcribe(audioFile string) {
 	}
 }
 
-func (w MlxWhisper) GetSegments() []Segment {
+// GetSegments returns a string representing the concatenated text of every
+// segment whose start is in [start, end).
+//
+// start and end are given as microseconds from the start of the audio
+// TODO: add the ability to cut video length
+func (w MlxWhisper) GetSegments(start, end int64) []Segment {
 	var whisperData MlxJSON
 	w.log.Debug("attempting to open", w.transcriptFile)
 	must(json.Unmarshal(must1(os.ReadFile(w.transcriptFile)), &whisperData))
@@ -600,7 +610,7 @@ func (w *Whisper) Transcribe(audioFile string) {
 // segment whose start is in [start, end).
 //
 // start and end are given as microseconds from the start of the audio
-func (w Whisper) GetSegments() []Segment {
+func (w Whisper) GetSegments(start, end int64) []Segment {
 	segments := []Segment{}
 	for _, seg := range w.segments {
 		segments = append(segments, Segment{
@@ -680,7 +690,7 @@ p {
 </head><body><p><em>transcription of <a href="%s">%s</a></em><p>
 `, h.video.title, h.video.URL, h.video.title))
 	// Get segments with timestamps to properly match thumbnails
-	segments := h.transcriber.GetSegments()
+	segments := h.transcriber.GetSegments(int64(0), h.video.durationMicroseconds)
 
 	// Track which thumbnail index we're on
 	thumbIndex := 0
@@ -692,7 +702,11 @@ p {
 		if h.video.thumbnails != nil && thumbIndex < len(h.video.thumbnails) {
 			// If this segment starts at or after the next thumbnail time, insert the thumbnail
 			if segment.Start >= nextThumbTime {
-				must1(fmt.Fprintf(transcriptHTML, "<img src=\"%s\"><p>", h.video.thumbnails[thumbIndex]))
+				// Create a link to the YouTube video at this timestamp
+				// YouTube accepts timestamps in the format: &t=XXs (seconds)
+				timestamp := int(nextThumbTime)
+				videoLink := fmt.Sprintf("%s&t=%ds", h.video.URL, timestamp)
+				must1(fmt.Fprintf(transcriptHTML, "<a href=\"%s\"><img src=\"%s\"></a><p>", videoLink, h.video.thumbnails[thumbIndex]))
 				thumbIndex++
 				nextThumbTime = float64(thumbIndex * h.opts.thumbInterval)
 			}
