@@ -523,10 +523,12 @@ func (w *MlxWhisper) Transcribe(audioFile string) {
 	if w.opts.thumbs {
 		intervals := []string{"0", strconv.Itoa(w.opts.thumbInterval)}
 		i := w.opts.thumbInterval
-		for i < getWavDuration(audioFile) {
+		duration := getWavDuration(audioFile)
+		for i+w.opts.thumbInterval < duration {
 			intervals = append(intervals, strconv.Itoa(i), strconv.Itoa(i+w.opts.thumbInterval))
 			i += w.opts.thumbInterval
 		}
+		intervals = append(intervals, strconv.Itoa(i))
 		intervalStr := strings.Join(intervals, ",")
 
 		sh(w.log, "mlx_whisper",
@@ -554,7 +556,14 @@ func (w *MlxWhisper) Transcribe(audioFile string) {
 func (w MlxWhisper) GetSegments(start, end int64) []Segment {
 	var whisperData MlxJSON
 	w.log.Debug("attempting to open", w.transcriptFile)
-	must(json.Unmarshal(must1(os.ReadFile(w.transcriptFile)), &whisperData))
+
+	// Read and fix NaN values in JSON (mlx_whisper outputs NaN which is
+	// invalid JSON)
+	jsonData := must1(os.ReadFile(w.transcriptFile))
+	// Replace NaN with null so it can be properly unmarshaled
+	jsonDataFixed := strings.ReplaceAll(string(jsonData), ": NaN", ": null")
+
+	must(json.Unmarshal([]byte(jsonDataFixed), &whisperData))
 	segments := []Segment{}
 	for _, segment := range whisperData.Segments {
 		segments = append(segments, Segment{
