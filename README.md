@@ -98,4 +98,4 @@ This means:
 
 For a typical 45-minute conference talk, this produces ~40 scene-detected frames + ~35 fallback frames instead of 90 fixed-interval frames, with better alignment to actual content changes.
 
-[Here is an example of adaptive mode](docs/klabnik-adaptive/httpswwwyoutubecomwatchvL2AOrseB2Y.html)
+[Here is an example of adaptive mode](https://llimllib.github.io/yt-transcribe/klabnik-adaptive/)

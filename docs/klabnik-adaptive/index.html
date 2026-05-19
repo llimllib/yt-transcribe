@@ -1,0 +1,654 @@
+<html><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+html {
+    /* fixes font size on iOS */
+    text-size-adjust: none;
+    -webkit-text-size-adjust: none;
+}
+body {
+  font-family: Georgia, "Book Antiqua", serif;
+  margin: auto;
+  justify-content: center;
+  color: #333;
+  max-width: 800px;
+  padding-top: 100px;
+  padding-left: 20px;
+  padding-right: 20px;
+}
+p {
+  font-size: 18px;
+  line-height: 30px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+</style>
+<title>Steel, Rust, and truth | Steve Klabnik | Bug Bash 2026 - transcription by yt-transcribe</title>
+</head><body><p><em>transcription of <a href="https://www.youtube.com/watch?v=L2AOrseB2_Y">Steel, Rust, and truth | Steve Klabnik | Bug Bash 2026</a></em><p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_0.jpg"><p> Hi, I'm Steve, everybody. How's it going?<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1.jpg"><p> This has been a great conference.<p>
+ I've seen over half a dozen people I haven't talked to in like 10 years here during this time, so it's been great, and it's been nice to meet a lot of you as well.<p>
+ I do work at East River Source Control at the moment, how to say this delicately.<p>
+ If you're experiencing unreliability with your source control hosting, we would like talk to you.<p>
+ We've not launched a product yet, but we're working on it furiously and quickly, as you might imagine.<p>
+ But I'm not going to talk about any of that for this talk.<p>
+ I love a cold open and I feel bad about a cold open, so just like, bear with me a little bit, please.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_38.jpg"><p> Okay?<p>
+ That's my warning about my own talk.<p>
+ So the first thing I'm going to talk today about is Pittsburgh.<p>
+ I think that we are all situated in time and place and history, and I spent the first 26 years of my life in Pittsburgh,<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_49.jpg"><p> and I think Pittsburgh is really important and has a lot to teach everybody.<p>
+ So I'm going to tell you.<p>
+ a little bit about Pittsburgh.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_63.jpg"><p> This is a recent photo.<p>
+ I think this is from Wikimedia.<p>
+ If you go on like Wikipedia, you'll see this picture of Pittsburgh.<p>
+ Pittsburgh is a great town.<p>
+ It started off at literally this is the point of the three rivers.<p>
+ If you ever heard about that as being a thing.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_76.jpg"><p> Down in the middle of this point was a thing called Fort Pitt.<p>
+ And you can actually kind of see, this is a little washed out,<p>
+ but there's like the outline of the fort that was originally there,<p>
+ is down at the center.<p>
+ And like, that's how, you know, obviously there's a large history in the Americas before<p>
+ the<p>
+ folks from Europe showed up, but we're going to start to the part where the folks from Europe showed up.<p>
+ A bunch of like, you know, people from France and England ended up settling at the bottom of<p>
+ Pittsburgh here, and it became like a really important part of what was like the Western frontier<p>
+ of the U.S. at the time.<p>
+ And after the like literally, it was only a fort when it became a city, there's all sorts of stuff<p>
+ going on.<p>
+ During George Washington's presidency, there was actually an event called the Whiskey Rebellions.<p>
+ So basically like the U.S. government, which again was like, the U.S. government, which again was like<p>
+ brand new and it just started was sort of trying to exert centralized force over the<p>
+ decentralized colonies. And so, like, they decided to tax whiskey. There's a whole bunch of<p>
+ reasons that I'm not going to get down that tangent for this talk, but like that ended up<p>
+ becoming this whole giant thing. George Washington, like literally personally led troops to march<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_136.jpg"><p> into Pittsburgh and be like, hey, what's up? You actually want to fight about this? Because, like, I got guns.<p>
+ And then, like, agrarian stuff kept happening. But eventually iron became a really big deal.<p>
+ Pittsburgh has a lot of natural.<p>
+ resources with like coal and stuff like this. And so iron became a super big deal.<p>
+ Like people know Pittsburgh is the steel city, and we'll get to that in just a moment, but like iron happened before steel. And to the degree where like there was, it was described as like hell with the lid knocked off was what people felt about Pittsburgh itself.<p>
+ Heavy industry, not exactly the most pleasant thing to exist. But like that happened in Pittsburgh before even its current, not even its current identity, but what people sort of like think about. And in fact,<p>
+ It's really interesting how you can trace history even through images of today.<p>
+ So this is a little small, but at the top of this building over here, it says UPMC at the top,<p>
+ because while that was the US steel tower, what it was originally built, and in fact, it's built of that kind of steel that russes in that orange kind of color,<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_196.jpg"><p> it represented the steel industry, and now it's the University of Pittsburgh Medical Center.<p>
+ Shout out to you all the people that watch the pit, which is, you know, raised up Pittsburgh a little bit recently.<p>
+ But we're going to get that a second.<p>
+ But the point is like, you could even see the transformation of Pittsburgh as a city in just this image.<p>
+ alone, if only you know where to look.<p>
+ My cousin got married last week, and so I was actually literally in Pittsburgh, and to give<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_215.jpg"><p> you sort of an idea of how much Pittsburgh has transformed, even from the steel industry times<p>
+ into sort of modern times, because like the steel industry collapsed, we're going to get there.<p>
+ But like, I took this photo last week, and then this is a photo on the same street, not the same<p>
+ block, but like the same street, about 100 years ago.<p>
+ So like, you know, you couldn't breathe, like very literally.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_237.jpg"><p> A lot of the history of like white collar.<p>
+ versus blue collar labor comes from the fact that if you needed to work a real job outside,<p>
+ you needed to be protected from the so you wore color like blue, which would hide it.<p>
+ And if you had the equivalent of an email job back in the 1800s, you were wearing white<p>
+ because you were inside and you were isolated from this kind of shenanigans.<p>
+ And so, like, you can just also, like, physically see the difference.<p>
+ And so this is like part of the story of Pittsburgh is one of total transformation several different<p>
+ times throughout its history, from like an agrarian thing to early industry and then to steel.<p>
+ and then now.<p>
+ eventually, you know, once steel collapsed, we had to figure out what the F to do about that.<p>
+ And so Pittsburgh is now, like, there's a reason why the show that is like the pit is about the medical<p>
+ industry, and that's because Pittsburgh is sort of shifted into education and medicine and<p>
+ like that kind of stuff.<p>
+ And so the economy is like totally changed.<p>
+ And that change happened like both across hundreds of years and also just within my lifetime.<p>
+ So next I want to tell you about my maternal grandfather, Ken Hooth.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_294.jpg"><p> So, you know, he did a lot of things in his life.<p>
+ He died a couple years ago, but the sort of important part about this story is this is a picture of him as a security guard at a steel mill.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_311.jpg"><p> Like he worked at a steel mill his entire life, he got a pension, he eventually retired.<p>
+ Did he have a particular passion for steel?<p>
+ No, but he did have a passion for like taking care of his family.<p>
+ And so, you know, he did a job that he had to do in order to make money to make sure that my mom, you know, had a good childhood and all that kind of stuff.<p>
+ And so, um,<p>
+ I think about him often and also especially like lately as all these things are happening because, you know, like he got, he basically was at the tail end of a dying industry,<p>
+ but also managed to retire before that, like completely collapsed.<p>
+ Like he kind of like got, you know, got out right at the end.<p>
+ And so a very funny minor tangent.<p>
+ I was working Cloudflare a couple years ago, and there was a weird outage where Verizon had posted a BGP route and redirected all of the traffic to like one Verizon thing.<p>
+ That was like the steel mill my grand.<p>
+ worked at. So it was a very weird like past and present kind of like thing. And then I was like,<p>
+ wait, why do they, why are they like getting BGP traffic? Anyway, whatever. But the point is,<p>
+ is that like, you know, this is a real thing that happens to people and industries and sometimes it<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_371.jpg"><p> works out for you. This is a picture of my dad. My dad died about 14 years ago, like five weeks from now.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_377.jpg"><p> And he, and like, so that was my maternal grandfather, I should do earlier, his dad, and his dad before that,<p>
+ his dad before that.<p>
+ we're all butchers and farmers. Like, we raised cattle, and that was, like, what he loved to do.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_394.jpg"><p> And that's why I show you this photo of him in front of his beloved farmall tractor. He's very big,<p>
+ like, red, not green tractors thing. But, like, you know, he, by the time, like, I was born in 1986,<p>
+ and when he was trying to raise his family, it turns out that, like, he, the thing that he loved to do<p>
+ didn't work out in that particular historical moment. Factory farming and the consolidation of farming meant that you could not really survive.<p>
+ as a local factory farmer with your 15, 20 cattle on 20 acres of land.<p>
+ And so my dad had to work a tool and die job where, ironically, he inspected, like, machines for safety properties.<p>
+ I didn't really realize that, so I was literally putting this talk together. I was like, whoa.<p>
+ But, like, what he loved to do is farming. And so he would wake up early before going to work and then do his farming stuff.<p>
+ And then after he would come home from work, he would do more farming stuff because that's what he loved.<p>
+ But it was just, like, not economically viable for his farming.<p>
+ him to be able to do the thing that he cared about. And I was like seven when I found computers.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_454.jpg"><p> We're getting to me in a second on the next slide. But like the point is, is that like sometimes that<p>
+ happens too. And that's a thing that also like occurred. And like I think a lot about the fact that<p>
+ if he hadn't, you know, died then, maybe if he was a little bit older, like just 20 years later,<p>
+ everyone starts to care about like, you know, organic this and farm to table that. And like his 20<p>
+ cattle could have maybe actually fed a family if that happened in 2010 instead of the 1900s, as the kids say.<p>
+ So, you know, I think about my dad a lot as well. So they have me. This is also an advanced<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_483.jpg"><p> Rust meme for any of you who are around during the 2016 thing or whatever. But like, I'm wearing a<p>
+ different brand of white shoes and the black baseball cap I have upstairs in my hotel room is a different<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_495.jpg"><p> black baseball cap, you know, but whatever. I've been me for a long time. I, again, history situated in time and<p>
+ place, I realized also while I was here that the 930 club was like a couple blocks away from here.<p>
+ Like, all.<p>
+ All of the music that I loved and grew up with was happening as I was born, like feet, like 10-minute walk away from here.<p>
+ I was like Ian McKay just did everything I care about, which is why I dress like this now.<p>
+ I was recently in a party with a bunch of other late 30s, early 40s guys, and we realized that four of us were wearing black t-shirts, black jeans, and white shoes.<p>
+ It was just like, when did that become the uniform? I don't know.<p>
+ Anyway, the point is, is that, like, I sort of, you know, I was a little kid, and I saw my dad not be able to do what he loved as a job.<p>
+ job and I realized I was not going to be carrying on the family legacy as a farmer. Like,<p>
+ I have sort of broken the family tradition by becoming a software developer. And, you know,<p>
+ I got happening to get lucky enough that I was introduced to computers at like seven, and then I went like,<p>
+ oh, yeah, like, I want to do this. I'm like not going outside anymore. And that's kind of what happened.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_555.jpg"><p> A colossal cave adventure, don't let your children play it, or they'll become nerds. But like,<p>
+ the point is, is that I managed to find this thing that I truly loved and purely by<p>
+ the accident of history and time and place, like, I am now flying all over the world and getting<p>
+ to talk to all of you, and like, I can afford a mortgage and, like, you know, like, all of these<p>
+ things, like, I got lucky that the thing that I love to do happened to be economically important<p>
+ at the time and place where I was born. And that's not a luxury that my father had, and it's not<p>
+ really a luxury my grandfather had either. And so that's just like a thing that I've sort of been<p>
+ thinking a lot lately because 2026 is like a weird year for software.<p>
+ And so, yeah, like three different generations.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_602.jpg"><p> Like my grandfather, that industry collapsed, but it did not actually affect him at all.<p>
+ My dad did tool and die work, literally checked tools for Rust, and like, he didn't really<p>
+ get to do what he wanted to do.<p>
+ And then, you know, now I'm me.<p>
+ So the question that I've been thinking about a lot this past year is like, which one of those<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_619.jpg"><p> things am I going to be?<p>
+ You know, obviously I'm going to be me, but like, am I going to be Pittsburgh?<p>
+ Am I going to be my grandfather or I'm going to be my father?<p>
+ Like I'm not sure yet exactly.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_629.jpg"><p> But I'm getting way ahead of myself.<p>
+ So why is it a weird year for software in, you know, AD 2026 or whatever?<p>
+ Well, it's AI. Sorry to put AI as getting to you ever, literally ever talk about this.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_643.jpg"><p> I'm not going to talk about how LMs work mostly.<p>
+ There's a little asterisk in this or whatever, but like you're all here.<p>
+ You know AI is happening. I don't need to tell you that it's everything all the time and that's all people can talk about and everyone's super feeling.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_654.jpg"><p> feeling there's a lot of<p>
+ lot of feelings. For like people that are supposed to be very like rationally scientific-minded<p>
+ and we like don't talk about feelings, literally everyone has so many feelings right now.<p>
+ Again, emo existed in 1984 and 1986 a couple blocks away and then in the 90s in the Midwest<p>
+ and then after that's not really emo. But like the important part is that we're all feeling that.<p>
+ And I'm feeling that especially, I joke to several people when they asked like, Steve, that title<p>
+ doesn't make any sense what is going on. And I was like, I think an uncharitable reading of this talk is like,<p>
+ I turn.<p>
+ I'm having a midlife crisis and I'm making it all your problems.<p>
+ You know, but like, you know, you know that this is like changing things.<p>
+ And I think what's important to sort of like recognize in some ways is that like even if you like<p>
+ AI and you don't like AI and I think a lot of people perceive me as liking AI and I think that<p>
+ like in the way that people are very polarized about it, I'm actually very pro AI.<p>
+ Also there's a lot of problems with it, but like it's like tough.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_714.jpg"><p> But the important part is that like it's happening and you can't really get away from it.<p>
+ And I think that's a lot of why people have feeling.<p>
+ is because like, you know, us in the Ruby community were really, really fucking annoying about TDD for a while there.<p>
+ But you could like get away from us and go do something else, right?<p>
+ Whereas like the problem with the AI situation is that it pervades like literally every room and I'm also doing it by continuing to talk about it.<p>
+ But like, sorry, just like that's what's going to happen.<p>
+ And so, you know, like just it's very weird.<p>
+ And so like we've all spent two days here like talking largely many things about like what does it mean for software to be correct.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_747.jpg"><p> And like AI has kind of like made that question like a very weird and uncomfortable one because, you know, of many reasons that I'm about to actually get into.<p>
+ And like a thing that's like, I think a core of a lot of this in terms of people's feelings about AI stuff, you know, a lot of people have said and it's been cited on stage the last couple days of like when I review AI written code, it's just like a little weird.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_759.jpg"><p> And like it has bugs I'm not used to seeing because when I review humans code, like their bugs make sense to me, but I just get this like eerie sense of distance from AI code and all that stuff.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_777.jpg"><p> and<p>
+ And like, I think that part of that is because, you know, when people didn't write stuff, like we now have these weird machines that produce code.<p>
+ And they are different than us.<p>
+ And so like you sort of like, even though people use these things as tools, like I often make a comparison between like text editors or compilers to various aspects of AI.<p>
+ But like I think those analogies have limits.<p>
+ And I only have 45 minutes and not like five hours.<p>
+ So I'm not going to get to that as part of an additional like, you know, tangent on a tangent on a tangent.<p>
+ But like even though, you know, I may open an editor and write code.<p>
+ and I have some intent. And even though I may tell Claude, like, here's what I want to do and then Claude doesn't does it, like, the intent gets a little weird because while I don't want to claim that LLMs have agency, they can also not do what you tell them to, which is like, but do they though then?<p>
+ I'm not talking about that philosophical tradition at all. I have like many other things to talk about.<p>
+ But the point is like right now, it's also like weird because in many cases, code review and like looking things after the fact for those of us who do a lot of AI-based development, it's kind of like all we do now.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_837.jpg"><p> And a lot of people.<p>
+ a lot of programmers have said, like, well, I really hate reviewing other people's code, and that's not the part of my job that I like.<p>
+ And I'm sort of like, all my side projects feel like an open source project where I don't write any of the code.<p>
+ I just review code, but instead of it being written by other people, it's being written my Claude.<p>
+ And, you know, that's just like a very, it's like simultaneously a totally different way of working and also a very similar one.<p>
+ Like, I've been lucky to do a lot of open source development in my career.<p>
+ And so when people are like, man, just like, I don't know what to do when you get code, when you get requests, a lot of them are bad and thereby people you never interacted with before and you have no idea<p>
+ if they're good or not. And just like, that sucks that that's what we're doing with Claude now, right?<p>
+ And I'm like, that's kind of been like what my job has been over the last 20 years is like accepting a random PR from any person on the internet who happens to kick one off.<p>
+ So anyway, I also have lots of feelings, which is sort of this.<p>
+ So let's talk about the like history of what correctness means, because that's kind of vaguely important, I think.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_886.jpg"><p> So I want to start with Descartes, actually.<p>
+ because like<p>
+ like, there's sort of this like, you know, humans have been asking like, what is truth and what is correctness mean for like a long time, it turns out?<p>
+ I mean, I'm skipping over a whole bunch of stuff because all my homies hate Plato, but like, we're going to start with Descartes, who like, also I'm not necessarily the biggest fan of, but like, whatever, I think it's a good spot for what I'm trying to say here.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_910.jpg"><p> And so, like, you know, Descartes imagined a little demon that would like whisper untrue things to him.<p>
+ And he's like, how can I trust any of my senses or whatever?<p>
+ And I'm just like, oh my God, Descartes had access to mythos.<p>
+ But like that was, you know, that I think therefore I am, is he's like, you need to have a rational, like, it's like foundation of like rationalism, right?<p>
+ Like, okay, if I can perceive it with my senses and then I know that it's true and real because I perceived it and that's what like sort of matters.<p>
+ And I had problems, but also, you know, it was the 1600, so, you know, so, you know,<p>
+ and then like after that I'm going to go to Liebnitz and his calculus, which is basically like, you know, he wanted to formalize all of mathematics into a thing.<p>
+ and then, like, he was doing, like, the lodge ban of his time, you know, or like the Esperanto.<p>
+ of his time. Like, if we could just, like, remove all the semantic ambiguity, then everyone would know<p>
+ what we're talking about, and that seems great, right? So let's, like, try to do that. And again,<p>
+ it was the 1600s, so, like, you know, we stand on the shoulders of giants and he, you know,<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_970.jpg"><p> he wanted to do this, and it was a little weird. Hilbert is kind of where a lot of this, like, kind of changes<p>
+ because, you know, he wanted to, like, also prove all of these different things about the way that we,<p>
+ like, talked about stuff. And, like, you know, all of this stuff is, like, we are built on top of these<p>
+ things. And then unfortunately,<p>
+ I didn't include my slides, but like, you know, a girdle, basically like that whole incompleteness thing was like, kind of like Hilbert, sorry, bro, but you're wrong.<p>
+ You know, and then also, like, in a very literal sense, Alan Turing also kind of in a different way, you know, being like, okay, well, we have this model of computation and now there's some things that we can't actually compute in a Turing machine and therefore incompleteness is, and there's all these connections between like Hilbert and Gertl and Turing, but I only have enough time to sort of gesture at all of that instead of actually say more things because I have literally not joking, nine other philosophical<p>
+ or computers and people to talk about. So we're just going to stick right there. But like the point is just like even if I draw these<p>
+ particular people out, like we've sort of been asking ourselves what is truth and what is real and what is meaning for like a long, a long time now.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1030.jpg"><p><p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1033.jpg"><p> And so in terms of like computer science and how we've been approaching these problems for the last, what is the math here, 80 years, I guess. I don't know. I keep, I'm not sure if it's just the pandemic has ruined my brain or the become up because I'm over 40, but I can't do basic math anymore. So like I'm like, what is 2026,<p>
+ minus 1960s. Oh God, Steve. Why didn't you memorize that before? It's been a while. The point is, is that like Tony Hoare,<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1051.jpg"><p> incidentally, Graydon Hoare, the guy who did invent Rust, totally unrelated to Tony Hoare. Just happened to share a last name, both computer scientists. Pretty cool.<p>
+! You know, he wanted to try to prove systems correct by having like pre and post conditions. You have the whore triple, right, of like your precondition, your state, and your post condition.<p>
+ And then you can sort of tower these things on top of each other. And that's how we can like understand how things work.<p>
+ And that was definitely really, really useful.<p>
+ And it was sort of like...<p>
+ trying to formally reason about program behavior. And in many ways, a lot of the stuff that we've talked about the last couple of days owes a tremendous conceptual debt to Tony Hoare and co.<p>
+ And then, like, later, I'm going to go to Martin Luth, however you, I'm sorry for those of you from Scandinavia or wherever that he's from that I'm mispronouncing, because I know it's not Lough, but I think it's like a luf.<p>
+ Anyway, whatever.<p>
+ And like, Robin Milner, you know, really worked on like type theory and formal semantics, but this whole like idea of like, you know,<p>
+ programs are proofs and<p>
+ like, our programs are like the instantiation of a proof that proves that the thing's correct and this like correspondence between types and programs and correctness.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1111.jpg"><p> Like that was all happening, you know, before I was born. So that's really cool.<p>
+ I still have a copy of, you know, a bunch of these books that I need to actually bother reading someday.<p>
+ We'll see if I get around to them.<p>
+ Book buying and book reading are two totally separate hobbies, as it turns out.<p>
+ And then I'm choosing Hearn and Reynolds in 2002 because of separation logic, which was briefly mentioned at least once yesterday.<p>
+ But<p>
+ Separation logic kind of takes whore logic and sort of adds the fact of like, wait a minute, like there's real systems under here to some degree and like about like and also still contains the like composable aspects of things.<p>
+ But this is sort of the like intellectual tradition of what Rust's type system is based on.<p>
+ The folks who did the work formalizing Russ type system was all sort of based around separation logic.<p>
+ And so the point is that we've also continued to like refine our ideas of what program correctness is about and what truth means.<p>
+ And we've created more and more intellectual tooling to sort of make that work.<p>
+ But like<p>
+ A funny question is sort of like for many programmers, like, well, my program ran and it did the right thing.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1171.jpg"><p><p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1173.jpg"><p> Is that like enough to know that it's correct or not?<p>
+ Because like a lot of the things that we do also kind of sort of boils down to that.<p>
+ And the folks, the stuff that you all are like working on is trying to go beyond that.<p>
+ But for many working programmers who've sort of been ignoring the corners of the sort of things<p>
+ that y'all like to do, you know, it's been, as it was just said at the end of the last like talk,<p>
+ like this stuff is becoming more relevant to industry as a polite,<p>
+ way to say that like many working programmers do not give a fuck about any of this.<p>
+ And now the problem is that like AI has made it impossible to know what's real and what's not real.<p>
+ So they're like, wait, how do we know what programs are real?<p>
+ And you're all like, uh, we've been doing this for like a long fucking time, actually.<p>
+ And so it really comes out of this question of like, what is truth?<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1216.jpg"><p> And this is really tough.<p>
+ We, I'm a weirdo in that I got a computer science bachelor's degree and then I almost got an English graduate degree.<p>
+ And so I really like to invoke the humanities often because I think,<p>
+ that that also really matters.<p>
+ And I wanted the start of this talk to really focus on the human,<p>
+ because I think that it is true that we think only about computers too often<p>
+ and not enough about the actual human side of things.<p>
+ And those things also do matter.<p>
+ And so there's a lot of people who are on my next slide that you may have a negative reaction to<p>
+ based on the fact that they're from the humanities.<p>
+ But like, it turns out that folks in the humanities have also been asking, you know,<p>
+ what is truth?<p>
+ I mean, I did do some philosophers like earlier, but the like important part is that like<p>
+ computer scientists are not, that we don't have a monopoly on the idea.<p>
+ of what truth is.<p>
+ I know that sometimes we like think that we do or we pretend to think that we do, but we don't.<p>
+ And I think there's like a rich intellectual tradition going on that's totally separate from all<p>
+ the stuff that we study when we go to university, but also is like useful and informative<p>
+ and doesn't even necessarily say different things.<p>
+ My point here is not like humanities people are better than computer science people.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1276.jpg"><p> It's more of just like, I wish there was more cross pollination because oftentimes they're saying<p>
+ and doing things in different senses and in different ways.<p>
+ And, you know, but like because of the like intellectual lineage of these things, it can be<p>
+ hard to like make those kind of connections and I smoke a lot of weed.<p>
+ So the problem, the problem here is like, I'm phrasing this as like meeting leaks and that's because<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1295.jpg"><p> there's this whole thing called post structuralism and structuralism that had beef with like Chomsky and<p>
+ there's a whole shenanigan set up here, you know, but like I'm going to start off with Derrida in 67.<p>
+ And so the thing is, is like this whole idea of like structuralism and the post-structuralism<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1314.jpg"><p> is that you have these like what's called a sign.<p>
+ And there's the signifier and the signified.<p>
+ And so like the sort of like the sign is the combination of the signifier and the signified.<p>
+ And the like signified is the thing you actually mean.<p>
+ And the signifier is how you refer to what you mean and the sign is the combination of both.<p>
+ I unironically think this is the best way to understand HTTP and rest.<p>
+ But that's again, like continues to be separate things.<p>
+ But like if you all know me from way back when I was obsessed with that, this is like partially why is because like I think it's like Derrida is directly relevant to like why the HTTP is a thing.<p>
+ But like the point is is that they were trying to construct like where is<p>
+ meaning and so like does that mean that meaning is this sort of underlying thing that's separate<p>
+ from language and we how we talk about stuff or is it like something sort of different.<p>
+ And so Derrida's whole thing is that like meaning is like deferred.<p>
+ And so you can't ever really fully understand what something means immediately because like you<p>
+ don't get the full context when you first talk about things.<p>
+ And so you know like I'm giving a whole talk and you're not really going to probably understand<p>
+ what I mean even when I'm done hopefully.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1374.jpg"><p> But like the thing is is that like, you know, when we communicate by speaking to each other<p>
+ And but like you will never really know what's going on in my head, thank God.<p>
+ Because like you only get my external API into you, right?<p>
+ Like language is the way that we interface with each other, but like interfaces are slippy and they're like different than what's truly going on internally versus not.<p>
+ And so this is like a whole bunch of sort of Derrida stuff.<p>
+ And so again, like this doesn't, this shouldn't be news to you in theory.<p>
+ Maybe some of the ways it's presented and the ways it's talked about is a little different.<p>
+ But like everybody knows that like just because you've proven something in Rock doesn't mean that it actually works in the<p>
+ real world, right?<p>
+ Like, was it newth that said, like, I've proved this program correct, but I haven't run it yet.<p>
+ So like, you know, who knows, right?<p>
+ Like, we acknowledge that there's a world outside of our fancy little type systems sometimes<p>
+ that like makes things not work even when they're supposed to.<p>
+ And so, you know, this is like a thing that we've been grappling with, but just in a totally<p>
+ separate way.<p>
+ And so sort of what we've been doing in the computer science world is to try to make type systems<p>
+ and other formalisms increasingly expansive in power so that we can try to eliminate that gap<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1434.jpg"><p> as much as possible.<p>
+ But I think an important thing to sort of recognize.<p>
+ is that it is fundamentally impossible to ever eliminate that gap.<p>
+ And so we're going to have problems for like ever because it turns out that like meaning is hard<p>
+ and like not, I don't think it's really actually solvable.<p>
+ So then I want to go to Deleuze and Guateri in the 80s.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1453.jpg"><p> And basically like their whole thing, or again, for the purpose of this talk, their whole thing,<p>
+ they had many things, is like the assemblage.<p>
+ And so this is sort of this idea, the same thing of these like reference and things referencing each other,<p>
+ but acknowledging that like it's not just within the system of the regime of signs or like<p>
+ whatever, that like matters, it's also everything else.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1471.jpg"><p> And so like, you know, in terms of like this conference,<p>
+ we are all individual members of this conference and we are making it up and<p>
+ we are bringing all our experiences and having the discussions.<p>
+ And like reality is like much more complicated than just, you know,<p>
+ I prove my program is correct.<p>
+ And in the same way that like our programs run on real hardware and like hardware has,<p>
+ you know, bit flips, for example, right?<p>
+ So if you prove your program correct and then you put it into a spaceship and then<p>
+ you fly it out there and then radiation hits it and it flips a bit,<p>
+ like those are things we have to deal with because the real world is not the ideal<p>
+ machine, it's like a physical object that obeys the physical world laws of reality.<p>
+ And, you know, not that we even know what those things entirely are, because physics is also hard and kind of a little insane, but like whatever, again, I'm trying to like really stay on topic here, even though it's hard.<p>
+ And so like this is like, this is why separation logic mattered a lot.<p>
+ And it's why like SEL4, for example, is like a big achievement is because they did more than just like prove that a C compiler could do the thing correctly.<p>
+ It was also like, you know, that this operating system is more proven correct in terms of like the hardware as well.<p>
+ And there's correspondence between the compiler's output and the assembly and the assembly and the<p>
+ way that that works and like blah blah blah but you still do get bugs occasionally.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1531.jpg"><p> They don't think SEL 4 has actually had a real correctness bug ever I think question mark<p>
+ I was reading that the other day but like a lot of times you prove something and you find out your<p>
+ proof was wrong with the real world and that like kind of matters and it's because the scope<p>
+ often includes more than just the thing that you're actually doing and so what's weird about like<p>
+ this in this sort of model and why I think this matters and what with LLMs is that like we<p>
+ used to think that somewhere in in all this artifice of our compilers and our IDEs and our I<p>
+ everything else that there was still like a human somewhere involved in there right like a<p>
+ human had to kick off the actual act of writing software at some point and that's<p>
+ just like not really true anymore now we also have a machine that produces<p>
+ software of let's say varying degrees of quality to give every you know a little<p>
+ and so like that's also like strange because now we're sort of like interacting with<p>
+ machines that feel human even though they're definitely not human probably I<p>
+ mean maybe we're machines I don't know so a whole separate thing I had no time to put<p>
+ ghost in the shell in this talk which is like shocking given how much I<p>
+ love ghosts in the shell but like the point is is that this<p>
+ this is also like one of the things that's weird is now like machines have taken on a certain amount of animus that like didn't really exist in the same way before you know we had this stuff and so finally I want to invoke Baudriard because you know he man I wish Baudreard was still alive because I really want to see what his take on this all this was because Baudreard basically was like<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1591.jpg"><p><p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1600.jpg"><p> okay meaning is completely and totally dislodged from whatever it was supposed to refer to in the first place or at least I would say like that's the way people often describe it I would say that like he would say that he would say that<p>
+ that for many people like corporations in the state deliberately obscure truth in order to make you not be able to<p>
+ understand what reality was and he did this by being like an old guy and watching TV in the 90s you know like this is like well before like the matrix is like directly building on top of like this stuff not like you know and now so now we're like oh my god like part of me when I'm not being at my most charitable is when people are like but with LLMs now I don't know what like reality is and I'm like you couldn't know what reality was before that actually like that was just never true<p>
+ you just got to ignore it for a while and now it's being shoved in our faces that it's true and so we're having a little collective mental breakdown and I feel like very you know<p>
+ Errogantly oh you had your mental breakdown now I had my mental breakdown 20 years ago when I was reading some books<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1660.jpg"><p> You know it's just like not actually better obviously but like the point is is that like this shit is intense and it's scary and it's weird and it's okay that we all have feelings about this because it's like not it's like not great to realize that you can't like trust anything anymore. You know like it's not like even if it was like tech<p>
+ technically a lie in that way that I'm dressed in all black and I'm like did you know the corporations are lying to you like it is like not it's not like great you know what I mean like it's like it's like it's true that that's like that sucks like I do want you know things to be like real and so this is like the thing like a lot of times programmers previously would say that their program is good enough because they wrote it and they understood it which then you're like well why bugs exist if you understand it and they're like shut up Steve and then they tried it out by executing it and like AI and LLMs have basically broken all three of these parts of<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1696.jpg"><p><p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1708.jpg"><p> of what we did to sort of like informally make correctness happen or like the things that you know we like try to agree that we know why programs are working is because like now we didn't write the code we don't need to understand the code itself and like sometimes you don't even try it like there's people that are like doing<p>
+ integration testing by basically making user personas with Claude and then having Claude click on the website and give like a thumbs up or a thumbs down and then you know you basically do like user review testing of your site and I don't know how they can afford to do that but apparently people are doing it but like the point is just that like<p>
+ everything is all broken and we don't know what is even real anymore.<p>
+ So what where does that like leave us though?<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1744.jpg"><p> at the same time like I can be up here and be like reality isn't real but like okay cool Steve but like what does that what does that actually like do?<p>
+ like I do have to go back to work on Monday you know what I mean like it's not like you can't just be like well<p>
+ sorry like I don't know what's going on anymore and so I'm gonna do that classic cool philosopher thing and be like fucking I don't know man<p>
+ but what I do think matters and is important though is that like<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1766.jpg"><p> you all and many people that are adjacent to you have been taking these questions about like what does a program do seriously it's it's so funny to like actually just say that like most programmers don't care if their programs work but like that is like true basically and has historically like been you know because again it's not really just about like in the limit do things work correctly like you know proving like a hundred percent of your program works 100% of the time is way harder than like being like well the test pass and like we'll have jobs to do and like most of the time you know users expect software to be buggy and you know users expect software to be buggy and you know users expect software to be buggy and you know<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1778.jpg"><p> and kind of bad and we've trained everybody to like think that computers are crappy and like you know whatever else and so like the reality is that<p>
+ most people have not really cared that much about correctness and now they've been emboldened by tooling that makes you even need to care way less about correctness<p>
+ and then they're going like oh my god I don't know how my programs work anymore and so what I mean to say is that like I think that all the stuff that we've<p>
+ been talking about here and like all the stuff that you all been working on and things that you will do in the future is like very critical for the rest of the industry and I'm glad that the rest of the industry is starting to pay attention to<p>
+ some of this kind of thing because I think that it's unfortunate that we had to like worry about you know are we going to put<p>
+ everyone out of jobs in the next five years or whatever everybody's talking about now to in order to like care about whether our programs work but I guess that's the reality that we live in and so you know like all of these tools and techniques like I don't the point of my talk is not that reality is not real and therefore don't bother doing testing it's like just acknowledge the fact that like when you prove a program correct you still have not necessarily run it and there's gaps in those things and we need to work on that because<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1838.jpg"><p> because the goal is to get better and better.<p>
+ The goal is never to be perfect.<p>
+ You're not going to be perfect.<p>
+ I don't because I don't really believe that you can fully understand reality,<p>
+ the idea we could prove a program correct also doesn't make any sense.<p>
+ But that doesn't mean we should totally give up on, you know, become solipsist and like completely not care about anything.<p>
+ Like I do care about truth, even though I'm not sure that what that is exactly.<p>
+ I do think it's important to be as truthful as possible and to sort of like approach that limit.<p>
+ And so, you know, uh, in some ways I think that you all have been like more prepared for this historical moment than many of the other.<p>
+ parts of the industry and I think that's important and does matter. And so please continue your work even if I'm not sure that it's going to like actually make sure that our programs work correctly at the end. And so that's kind of what I want to like leave you with sort of what I said before. Like it's very strange that I started programming at seven and now I'm 40 and 2026 is probably the first year I will not write any software myself because Claude has been writing most of my software for the end of 2025 and I review every diff before I merge it on my real adult real projects. So my personal projects I don't care, but I never cared in the first<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1898.jpg"><p><p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1899.jpg"><p><p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1912.jpg"><p> place, but like there is a professionalism aspect, but like it is important to me that it is significant that like,<p>
+! I mean, I think back to like when I used to argue about tabs versus spaces and I'm just like, I am like questioning about,<p>
+ like, do I read the code or not at this point? It's like very different kind of thing.<p>
+ but like you do need to read the code, especially today because LMs are not perfect, blah, blah, blah,<p>
+ whatever. Like I do think we have professional responsibilities and you should not just merge random crap into<p>
+ into master. Like it is important that you make sure like for our users.<p>
+ we need to make sure that our software is as correct as possible. That does actually matter.<p>
+ And it is important and we do have like a professional duty to not put total crap out there in the world.<p>
+ Like I do think that that is important.<p>
+ But it's just very strange that like I find myself wondering, like, I've devoted my life to this thing and it feels like it almost doesn't really matter anymore in many ways.<p>
+ And that's a little strange.<p>
+ And so, you know, as I'm like an engineer over the hill, but like not, you know, terminally there, I'm like wondering, like, am I going to be my grandfather?<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_1972.jpg"><p> And like just me, you know, I got to type in the code and then I retired and then all the kids don't anymore or like whatever.<p>
+ And like, do I just barely make it out of the ship before it crash?<p>
+ or like, you know, I do like working with Claude, but for those people that really hate using AI tools for development,<p>
+ I really feel bad for them because like that's what happened to my dad.<p>
+ Like he had to do a job he didn't like and I do again if I'm being uncharitable like we have been sort of babies who have been paid very very well to get to do what we think is fun for a job<p>
+ And now that we're like told like sorry you can't just do whatever you want for fun you have to like actually do your job<p>
+ We complain about it a lot and that like and that's because like we've been babyed for like a long time and so like on<p>
+ some level I'm just like, oh yeah, you have to go to a job that you hate like sucks like to be like literally every other profession that's not ours.<p>
+ That's just rained hundreds of thousands of dollars for like, you know, just not working very often.<p>
+ I'm dating a real estate agent now and like when she's like looks at like, wait, you guys do, when I told her like, oh yeah, me and like two other friends of mine were taking Friday off because the video games coming out, we were going to play it.<p>
+ And she's like, hold on. Like, wait, you're doing what?<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2032.jpg"><p> And I was like, yeah, that's really normal actually. Like it's totally fine and I'm 40 and I'm taking a day off work to play a video game, okay?<p>
+ And she's like, I don't know.<p>
+ You guys are...<p>
+ The more I learned about software developers, the weirder I find you all.<p>
+ But it's like, it's good perspective from the outside.<p>
+ You know what I mean?<p>
+ Like, I think that when we complain about the things, like,<p>
+ it is true that like labor stuff matters.<p>
+ When my best friends is in town, he's one of the few unionized jobs in tech.<p>
+ Like, it does matter what our working conditions are.<p>
+ But at the same time, we do have to recognize that we whine about like no longer having ping pong tables at the office<p>
+ to somebody that works like a real blue collar job.<p>
+ They're like, okay, man, like I don't care about you.<p>
+ And that, like, sucks because we should all, anyway.<p>
+ I'm not trying to even more tangents because like I'm already basically, you know,<p>
+ at time. So the point is, is that, like, you know, I'm going to be my grandpa and, like, get out of here<p>
+ right before everything collapses and be like, okay, cool. You know, and I'm going to be my dad,<p>
+ where maybe it turns out that I don't like working this way, but I'm going to have to do that because,<p>
+ like, I got bills to pay, you know, and a family to feed. And they're in like, that, that's still,<p>
+ like, that's still good to, you know, like to, you don't have to love what you do for work.<p>
+ You couldn't just, like, care about your family and feed them. And that's like,<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2092.jpg"><p> that's a good life. You know what I mean? Or, like, am I going to be Pittsburgh and just<p>
+ completely reinvent myself and do, you know,<p>
+ either something else or change with the times and, you know, do the stuff that I, you know,<p>
+ like now and just be like, it's okay that I thought 15 years ago it was really, really important to<p>
+ describe, like, you know, well, should you name your methods in an imperative tense or, like, not,<p>
+ you know, and like, we'd argue about that forever. And like, you know, so like maybe that stuff didn't<p>
+ matter, and maybe I wasted a little bit of my life, but, like, maybe that was okay. And,<p>
+ like, times are different and that's fine. And so we shouldn't have so much anxiety about it. And so<p>
+ I would like to encourage you all to also, like, you know, think about, like, what one are you going to be,<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2125.jpg"><p> and what do you want to do in the world?<p>
+ And please try to make the world a better place,<p>
+ even though, again, like, in my moments, I'll be like,<p>
+ I don't know what truth is, but that's, we still gotta do our best, you know?<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2137.jpg"><p> And so, you know, how are we all going to collectively deal with the fact<p>
+ that this year is probably one of the most transformative years<p>
+ for our industry for better or for worse?<p>
+ Like, it might also be a bad way, too, or a good way.<p>
+ I don't know, but I think we're all having a lot of anxiety<p>
+ and we gotta like take a collective breath together<p>
+ and like acknowledge that it's like fine to have that kind of anxiety<p>
+ because when the world changes so rapidly,<p>
+ Like we are like always the ones being like, we're changing the world.<p>
+ Like I was watching, God, I'm on my final slide, I'm already going on more tangents.<p>
+ It's fine, this will be a second.<p>
+ I was watching Silicon Valley on the airplane, okay?<p>
+ And Silicon Valley is like an awesome time capsule that was like hard to watch in the moment<p>
+ because it was like so real.<p>
+ But like also, you know, they're all getting up there on stage and, you know, at TechCrunch Disrupt.<p>
+ And they're like, and that's how I'm making the world a better place.<p>
+ And I was like, oh my God, it's like a sleeper cell activation phrase in my brain of like<p>
+ startup culture for 15 years ago, you know?<p>
+ But it's like, but, but.<p>
+ But like that was a thing that we said we were doing while we were like massively automating other industries out of their own employment and like cheering about it and making money.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2197.jpg"><p> And so now that it's happening to us all of a sudden we're really worried about automation, right?<p>
+ But like, so on one hand, like I feel that we're being a bit hypocritical, but also like we all do have like families and mortgages and stuff, or many of us do.<p>
+ And so it's it's not unreasonable to be upset when that happens.<p>
+ So anyway, regardless, just, yeah, that's what I have for you today.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2214.jpg"><p> Thank you so much for having me.<p>
+ Sorry to be a little bit of a downer.<p>
+ Steve, do you want to take some questions?<p>
+ If we have time, I don't know, since we were like, we're a little late, like, I don't want to take up some position.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2231.jpg"><p> Sure, I'm happy to answer questions.<p>
+ Hopefully it was something more than I don't know.<p>
+ Yeah.<p>
+ But thanks so much.<p>
+ It was an excellent talk.<p>
+ Thank you.<p>
+ Economists have been defining technology as labor multibreliber,<p>
+ malt.<p>
+ multiplier or amplifier.<p>
+ Yeah, yeah.<p>
+ Some people are saying that AI is different.<p>
+ It's actually a capital amplifier.<p>
+ Sure.<p>
+ Where do you?<p>
+ Where do you?<p>
+ Okay, so like the problem is like, the way I would answer your question is that like,<p>
+ am I an Orthodox Marxist or not?<p>
+ Is really what it boils down to?<p>
+ Because like, historically speaking, like that is the question is like,<p>
+ okay, automation is historically been like a thing that amplifies labor's ability to do work, right?<p>
+ But the end of the day, you still need somebody to be doing labor down there.<p>
+ And so.<p>
+ So like, I don't know if, like, me kicking off a swarm of Claude is, like, still, like,<p>
+ rooted in the idea that I'm the one who's doing the little bit of labor, and it's just a massive<p>
+ multiplier because, like, again, like, okay, so that, like, makes sense in some capacity, like, okay,<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2291.jpg"><p> I'm still a working programmer because I'm still doing my job.<p>
+ It's just that my job is telling a bunch of LMs to do their job.<p>
+ But then, like, well, what about the cron job that kicks off and tells Claude, like, please, you know,<p>
+ look at my code base and send in some refactoring PRs for me?<p>
+ And then it's like, okay, well, somebody had to write the cron job.<p>
+ And then I'm like, well, you know, like, somebody told the<p>
+ LLM to write that Kron job. So I don't know where it comes down, but I do think that, like,<p>
+ okay, a thing that I find comfort in is the fact that, like, if you look at Anthropic and Open<p>
+ AIs jobs pages, they are still hiring engineers, right? And so they're like, if I expect anyone<p>
+ to be able to fully be putting software developers out of, like, work in the sense of not having<p>
+ us do our jobs anymore, it would be those companies. And given the fact that they're not doing that,<p>
+ I'm feeling pretty good at the end of the day. Now, I'm also me with 20 years or how many years has been a<p>
+ industry experience. Like my little brother's been trying to find a job in this industry for like three years.<p>
+ Even though I get invited to keynote conferences and get up on the stage, I have not been able to figure out how to get him a job.<p>
+ And that really sucks. And so I don't want to like dismiss, you know, again, it's sort of like, I'm, I'm on this lifeboat.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2351.jpg"><p> So what are you complaining about in the water, you know, treading? So like that's like part of it too. But I do think that like,<p>
+ at least for the near term future, and maybe near term means like 12 months and not like 10 years or something.<p>
+ But like that ultimately our profession is not going away. It's just going to be changing a lot.<p>
+ And I do worry about like automation is like automation creates a gap where there's value there that's like able to be captured that wasn't before.<p>
+ and the question is does like our jobs get that value capture or do we get that value capture?<p>
+ And so like I have also experienced like LLM psychosis in the sense of like I have a side project and I was hanging out with the family over Christmas and I shipped 100 PRs to my compiler on Christmas Day while hanging out with my family.<p>
+ and like that's slightly disordered behavior maybe.<p>
+ But it's like, you know, you get a.<p>
+ excited about like kicking off, you know, these things.<p>
+ And like, so it's like work, but it's not work.<p>
+ And then you find yourself working all the time, but then you like don't necessarily want to work all the time.<p>
+ And then again, like GitHub's kind of going down and I'm trying to sell sorts control.<p>
+ So I sort of need to do work all the time because I need to get that shit out there.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2411.jpg"><p> You know, it's like there's pressures that come from more than just AI.<p>
+ And I think that we're just all feeling all of that simultaneously.<p>
+ So I'm not sure where it leads.<p>
+ But I think in the near term, I think it is a productivity multiplier.<p>
+ And the question is what do we do with that more than it's going to be a thing that replaces us?<p>
+ I don't think that we're at the point where it just actually literally replaces humans.<p>
+ investments.<p>
+ Thank you.<p>
+ And who's your favorite bit character?<p>
+ So I'm really squeamish, so I tried to watch it and I couldn't.<p>
+ Even though like I was like, but I think that the main doctor<p>
+ is actually my favorite character because they don't let him get away with like,<p>
+ he doesn't get to be a redeemable asshole, he's just kind of an asshole, right?<p>
+ And I think that's like a big shift for this kind of like television.<p>
+ So that's what I have to say, but I haven't watched as much of it as I would because I just can't handle blood.<p>
+ So you know, that's how goes.<p>
+!<p>
+ Hey, Steve, how you doing?<p>
+ Good.<p>
+ Rusty question.<p>
+ Yes.<p>
+ So I saw this deal.<p>
+ export where like AIs are writing better Rust than writing anything else.<p>
+ So cool.<p>
+ It makes me think though, is Rust good enough for AIs or do you see the language evolving further<p>
+ for AI stuff?<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2471.jpg"><p> So I do think that Rust is great for LMs.<p>
+ I'm happy with the output of Claude with Rust code in general.<p>
+ But like I do think that we're never going to be finished with programming languages.<p>
+ And so like I expect that someday there will be a language that I like better than Rust<p>
+ that exists.<p>
+ but I'm not exactly sure.<p>
+ sure what that looks like in particular.<p>
+ And so, you know, but for now I definitely like Rust and TypeScript is my default stack because<p>
+ just like, you know, I think types are good and they help you sort of want to give LLM's immediate<p>
+ feedback on whether the thing is right or wrong and types are great for that.<p>
+ And so I think that like I've seen some stuff that's like, well, Ruby code has like less token usage.<p>
+ And like, okay, but like also it has Eldra Torr's lying beneath there that are like hard to debug.<p>
+ And so like, you know, I do think that like statically typed systems are going to become more<p>
+ and more prevalent with LLMs and talking about being historically contingent.<p>
+ Like I think it's got, it's real weird that we got Rust at the right moment at the right time<p>
+ and it happens to have a lot of the factors that LMs find to be good at programming.<p>
+ And that was definitely an accident unless Nico is a time traveler, which I don't think he is.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2531.jpg"><p> So, uh, but yeah, so I do think that we're not at the end of programming language history,<p>
+ but I definitely don't have a sense of what I think is like going to come next is the way I would put it.<p>
+ Hey. Hey, Steve, great talk.<p>
+ One complaint. You didn't talk fast enough. I'm sorry.<p>
+ Okay. I'm just kidding.<p>
+ It's a common problem of mine.<p>
+ I love Steve. I'm his coworker. I kind of feel bad stealing this. But yeah, I just wanted to rib you a little bit.<p>
+ Okay, so you might understand kind of what I'm getting at here back to your like little philosophical<p>
+ bent because I didn't get a pre-recorded version of this talk. I didn't get to see it early.<p>
+ I've always thought that like part of the thing, especially in modern society, computers are very alienating.<p>
+ You know, like whenever you use social media and you see people, you know, like being like animals attacking each other and stuff like that, you know, being behind the screen away<p>
+ from the person on the other side is very alienating.<p>
+ And I think for me, one thing about AI is that it, the alienation has come to us, you know,<p>
+ people who like love just sitting in front of the computer, right?<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2591.jpg"><p> So like, and I think that's a big part that's very difficult to articulate is like why you feel<p>
+ alienated from your own work.<p>
+ I know you know what I'm getting at here, but I guess my question is, what do you do to manage it?<p>
+ I think just for me, personally, I think it's literally touching grass.<p>
+ Like, do you do anything when you're thinking about these things?<p>
+ I think this is a great framing and I, I agree.<p>
+ not just because we're friends and we work together, but like, yeah, like, on some level, I think that maybe I'm, like, the right kind of neurospicy and that I don't get as alienated by these things as other people do necessarily, but I do try to, like, take breaks. I've been trying to, like, lift weights and that's gone okay.<p>
+ And, like, I think that, like, getting out is definitely helpful.<p>
+ While, like, while in earlier stages of working with these tools, I definitely worked a lot and all the time, I do, like, you know, when I'm with my girl,<p>
+ kid over the weekend, I try to not use Claude while hanging out with them anymore because I think it's important to pay attention to the literal children that are now in my life.<p>
+ But, you know, like, but I do think that kind of matters, but I think on some level it's just, it comes back to, again, the, like, every job is alienating to some degree.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2651.jpg"><p> And like, you know, even when you got to write code that was interesting, you know, fixing your 12th Gera ticket of the week was like always vaguely alienating in the first place.<p>
+ And so I think it's an amplification more than a change in kind. Like, it's more of a change in degree than a change in kind.<p>
+ but, you know,<p>
+ Yeah, it's basically just like, I've sort of put a moratorium on side projects at the moment and just play video games.<p>
+ Shout out Marathon.<p>
+ Marathon and JJ.<p>
+ I can't believe I want 45 minutes of talking about Marathon or JJ.<p>
+ I guess technically I did at the start.<p>
+ But like because of that, right?<p>
+ Like I don't want, I have joked to my girlfriend that if I didn't have her, I would probably just be sitting in front of nine Claude panels 24-7 and not ever doing anything else.<p>
+ And so it's really important, I think, to like, touch grass.<p>
+ Right.<p>
+ In whatever capacity, touching grass is a metaphor for a reason.<p>
+ and whatever your grasp.<p>
+ is, you know, maybe that's playing an instrument or like talking other humans or going outside or like whatever it is.<p>
+ Like it is important to do those things. Yeah.<p>
+ Sweet. Thanks everybody.<p>
+<img src="./httpswwwyoutubecomwatchvL2AOrseB2Y_thumb_2710.jpg"><p><p>
+<p><em><a href="https://github.com/llimllib/yt-transcribe">generated by yt-transcribe</a></em></body>
