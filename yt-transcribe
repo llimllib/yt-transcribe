@@ -16,6 +16,10 @@ OPTIONS
     -thumbs:        enable thumbnail generation
     -thumbinterval: the interval between thumbnails, in seconds [default 30]
     -thumbwidth:    the width of the thumbnails, defaults to 640
+    -adaptive:      use scene detection to adaptively choose thumbnail times
+    -scenethresh:   scene detection threshold (0.0-1.0) [default 0.03]
+    -mingap:        minimum seconds between adaptive thumbnails [default 10]
+    -maxgap:        maximum seconds without a thumbnail (fallback interval) [default 60]
     -v:             print more verbose output
 
 DEPENDENCIES
@@ -45,6 +49,14 @@ Transcribe a video and insert thumbnails every 30 seconds (the default):
 Transcribe a video and insert thumbnails every 10 seconds:
 
     yt-transcribe -thumbs -thumbinterval 10 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
+
+Transcribe with adaptive scene-detection thumbnails:
+
+    yt-transcribe -thumbs -adaptive 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
+
+Adaptive with custom thresholds (more sensitive, tighter gaps):
+
+    yt-transcribe -thumbs -adaptive -scenethresh 0.02 -mingap 5 -maxgap 45 'https://www.youtube.com/watch?v=X48G7Y0VWW4'
 Transcribe a video to the 'look-around-you' directory, with a filename 'water.html':
 
     yt-transcribe -thumbs -outdir ./look-around-you -outfile water.html 'https://www.youtube.com/watch?v=gaI6kBVyu00'
@@ -74,7 +86,10 @@ thumbinterval=30 # default 30s between thumbs
 outdir=
 thumbwidth=640
 model='mlx-community/distil-whisper-large-v3'
-thumbwidth=640
+adaptive=
+scenethresh=0.03
+mingap=10
+maxgap=60
 
 # parse command line arguments
 while true; do
@@ -95,6 +110,22 @@ while true; do
         ;;
         -thumbwidth)
             thumbwidth=$2
+            shift 2
+        ;;
+        -adaptive)
+            adaptive=yup
+            shift
+        ;;
+        -scenethresh)
+            scenethresh=$2
+            shift 2
+        ;;
+        -mingap)
+            mingap=$2
+            shift 2
+        ;;
+        -maxgap)
+            maxgap=$2
             shift 2
         ;;
         -outdir)
@@ -156,22 +187,27 @@ if [ ! -d $yttranscribe_cache_folder ]; then
     mkdir $yttranscribe_cache_folder
 fi
 
-# get the video title. Sometimes yt-dlp fails but manages to return the title
-# anyway, so proceed if it returns non-zero exit code but also a video title
-# https://github.com/yt-dlp/yt-dlp/issues/13635
-set +e
-title=$(yt-dlp --skip-download --print title "$1")
-yt_exit_code=$?
-set -e  # Re-enable exit-on-error
-
-# Proceed if we got a title, regardless of exit code
-if [[ -n "$title" ]]; then
-    echo "Title obtained: $title"
-    # Continue with your script...
+# get the video title, caching it for offline use
+title_cache="$yttranscribe_cache_folder/title_$yturl_clean.txt"
+if [ -f "$title_cache" ]; then
+    title=$(cat "$title_cache")
 else
-    echo "Failed to get title, exit code: $yt_exit_code" >&2
-    exit 1
+    # Sometimes yt-dlp fails but manages to return the title
+    # anyway, so proceed if it returns non-zero exit code but also a video title
+    # https://github.com/yt-dlp/yt-dlp/issues/13635
+    set +e
+    title=$(yt-dlp --skip-download --print title "$1")
+    yt_exit_code=$?
+    set -e  # Re-enable exit-on-error
+
+    if [[ -n "$title" ]]; then
+        printf "%s" "$title" > "$title_cache"
+    else
+        echo "Failed to get title, exit code: $yt_exit_code" >&2
+        exit 1
+    fi
 fi
+echo "Title: $title"
 
 # download audio of talk if we haven't yet
 ytdl_audio_outfile="$yttranscribe_cache_folder/rawaudio_$yturl_clean.%(ext)s"
@@ -279,20 +315,7 @@ else
     # Convert duration to seconds
     duration_sec=$(printf "%.0f" "$duration")
 
-    intervals=
-    if [ "$duration_sec" -gt "$thumbinterval" ]; then
-        # Loop through the duration in 30-second intervals and build a string for
-        # the clip-timestamps option of mlx_whisper
-        intervals="0,$thumbinterval"
-        max=
-        for ((i=0; i+thumbinterval<"$duration_sec"; i+=thumbinterval)); do
-            intervals="$intervals,$i,$((i+thumbinterval))"
-            max=$((i+thumbinterval))
-        done
-        intervals="$intervals,$max"
-    fi
-
-    # transcribe the video into json format, clipping at 30-second intervals
+    # transcribe the video into json format
     transcript="$yttranscribe_cache_folder/audio_$yturl_clean.json"
     if [ ! -f "$transcript" ]; then
         printf "%btranscribing%b\n" "$GREEN" "$CLR"
@@ -300,36 +323,88 @@ else
                  -f json \
                  -o "$yttranscribe_cache_folder" \
                  --verbose False \
-                 --clip-timestamps "${intervals[@]}" \
                  "$wavfile"; then
             printf "%bfailed running mlx_whisper%b\n" "$RED" "$CLR"
             exit 1
         fi
     fi
 
-    # Now loop through the intervals and output the HTML accordingly
-    for ((i=0; i<="$duration_sec"; i+=thumbinterval)); do
-        imgName="${yturl_clean}_thumb_$i.jpg"
+    # Build the list of timestamps for thumbnails
+    if [ -n "$adaptive" ]; then
+        # Use scene detection to find timestamps adaptively
+        printf "%bdetecting scene changes%b\n" "$GREEN" "$CLR"
+        timestamps_file="$yttranscribe_cache_folder/timestamps_$yturl_clean.txt"
+        ffmpeg -i "$rawvideo" \
+            -vf "select='gt(scene,$scenethresh)',metadata=print" \
+            -f null - 2>&1 \
+            | grep "pts_time" \
+            | sed 's/.*pts_time:\([0-9.]*\)/\1/' \
+            | awk -v mingap="$mingap" -v maxgap="$maxgap" -v duration="$duration_sec" '
+                BEGIN { last=-999 }
+                {
+                    t = $1 + 0
+                    if (t - last >= mingap) {
+                        # fill in fallback frames for any gap > maxgap
+                        if (last >= 0 && t - last > maxgap) {
+                            for (fill = last + maxgap; fill < t; fill += maxgap) {
+                                printf "%.0f\n", fill
+                            }
+                        }
+                        printf "%.0f\n", t
+                        last = t
+                    }
+                }
+                END {
+                    # fill trailing gap
+                    if (duration - last > maxgap) {
+                        for (fill = last + maxgap; fill < duration; fill += maxgap) {
+                            printf "%.0f\n", fill
+                        }
+                    }
+                }' > "$timestamps_file"
+
+        # Ensure we start at 0
+        first_ts=$(head -1 "$timestamps_file")
+        if [ "$first_ts" -gt 0 ] 2>/dev/null; then
+            sed -i '' '1i\
+0' "$timestamps_file"
+        fi
+
+        mapfile -t timestamps < "$timestamps_file"
+        printf "%bfound %d thumbnail points%b\n" "$GREEN" "${#timestamps[@]}" "$CLR"
+    else
+        # Fixed interval timestamps (original behavior)
+        timestamps=()
+        for ((i=0; i<="$duration_sec"; i+=thumbinterval)); do
+            timestamps+=("$i")
+        done
+    fi
+
+    # Now loop through timestamps and output the HTML accordingly
+    num_timestamps=${#timestamps[@]}
+    for ((idx=0; idx<num_timestamps; idx++)); do
+        ts=${timestamps[$idx]}
+        # determine the end of this segment (start of next, or end of video)
+        if ((idx + 1 < num_timestamps)); then
+            next_ts=${timestamps[$((idx+1))]}
+        else
+            next_ts=$duration_sec
+        fi
+
+        imgName="${yturl_clean}_thumb_${ts}.jpg"
         img="$htmldir/$imgName"
-        # I tried to find a video filter here that would avoid the initial
-        # black frame I'm seeing, but was unsuccessful. Some attempts:
-        #
-        #-vf "select='eq(n,0)+eq(pict_type,PICT_TYPE_I)+gt(scene,0.3)',scale=320:240,unsharp" \
-        #-vf "select='gt(scene,0.3)',scale=320:240,unsharp" \
-        #-vf "select='eq(pict_type,PICT_TYPE_I)',scale=320:240,unsharp" \
-        #
-        # instaed I'm just pulling the frame from 1 second into the segment
-        # instead of zero, which is a pretty lame thing to do
-        ffmpeg -ss "$((i+1))" -i "$rawvideo" \
-            -vf "select='eq(n,0)+eq(pict_type,PICT_TYPE_I)+gt(scene,0.3)',scale=${thumbwidth}:-1,unsharp" \
+
+        # grab a frame 1 second into the segment to avoid black frames
+        ffmpeg -ss "$((ts+1))" -i "$rawvideo" \
+            -vf "scale=${thumbwidth}:-1" \
             -vframes 1 -q:v 2 "$img" -y &> /dev/null
         printf '<img src="./%s"><p>' "$imgName" >> "$transcript_html"
 
         # pull the segment transcript(s) out of the json file and write
         # them to the HTML output
-        segment=$(jq -r $"[.segments[] |
-                           select(.start >= $i and .start < $((i+thumbinterval))).text] |
-                          join(\"<p>\n\")" "$transcript")
+        segment=$(jq -r --argjson start "$ts" --argjson end "$next_ts" \
+            '[.segments[] | select(.start >= $start and .start < $end).text] | join("<p>\n")' \
+            "$transcript")
         printf "%s<p>\n" "$segment" >> "$transcript_html"
     done
 fi
