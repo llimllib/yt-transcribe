@@ -90,9 +90,12 @@ Because it's [a lot faster on my machine](https://notes.billmill.org/link_blog/2
 By default, `-thumbs` captures a screenshot every N seconds (default 30). With `-adaptive`, the script uses FFmpeg's scene change detection to find moments where the visual content actually changes (e.g., slide transitions in a talk), and only captures thumbnails at those points.
 
 This means:
+
 - Slide transitions are captured precisely when they happen
 - Long stretches where the speaker talks over a static slide get fewer redundant screenshots
 - A fallback frame is inserted every `-maxgap` seconds (default 60) so you never go too long without a visual reference
 - Duplicate detections (e.g., during animated transitions) are filtered out with `-mingap` (default 10s)
 
 For a typical 45-minute conference talk, this produces ~40 scene-detected frames + ~35 fallback frames instead of 90 fixed-interval frames, with better alignment to actual content changes.
+
+[Here is an example of adaptive mode](docs/klabnik-adaptive/httpswwwyoutubecomwatchvL2AOrseB2Y.html)
